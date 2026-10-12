@@ -1,0 +1,115 @@
+[
+  { "id": "w1", "name": "소프트웨어 설계", "examType": "written", "order": 1,
+    "tags": ["요구사항 분석", "UML", "UI 설계", "디자인 패턴", "아키텍처", "인터페이스"],
+    "units": [
+      { "id": "w1-u1", "name": "요구사항 확인", "order": 1, "standardHours": 6, "core": true, "tags": ["요구사항 분석", "UML"] },
+      { "id": "w1-u2", "name": "화면 설계", "order": 2, "standardHours": 3, "core": false, "tags": ["UI 설계"] },
+      { "id": "w1-u3", "name": "애플리케이션 설계", "order": 3, "standardHours": 6, "core": true, "tags": ["디자인 패턴", "아키텍처"] },
+      { "id": "w1-u4", "name": "인터페이스 설계", "order": 4, "standardHours": 4, "core": false, "tags": ["인터페이스"] }
+    ] },
+  { "id": "w2", "name": "소프트웨어 개발", "examType": "written", "order": 2,
+    "tags": ["자료구조", "정렬 알고리즘", "통합 구현", "패키징", "테스트 기법", "형상 관리", "인터페이스"],
+    "units": [
+      { "id": "w2-u1", "name": "데이터 입출력 구현", "order": 1, "standardHours": 7, "core": true, "tags": ["자료구조", "정렬 알고리즘"] },
+      { "id": "w2-u2", "name": "통합 구현", "order": 2, "standardHours": 3, "core": false, "tags": ["통합 구현"] },
+      { "id": "w2-u3", "name": "제품소프트웨어 패키징", "order": 3, "standardHours": 4, "core": false, "tags": ["패키징", "형상 관리"] },
+      { "id": "w2-u4", "name": "애플리케이션 테스트 관리", "order": 4, "standardHours": 6, "core": true, "tags": ["테스트 기법"] },
+      { "id": "w2-u5", "name": "인터페이스 구현", "order": 5, "standardHours": 3, "core": false, "tags": ["인터페이스"] }
+    ] },
+  { "id": "w3", "name": "데이터베이스 구축", "examType": "written", "order": 3,
+    "tags": ["SQL", "정규화", "관계대수", "트랜잭션", "인덱스", "E-R 모델", "데이터 전환"],
+    "units": [
+      { "id": "w3-u1", "name": "SQL 응용", "order": 1, "standardHours": 6, "core": true, "tags": ["SQL"] },
+      { "id": "w3-u2", "name": "SQL 활용", "order": 2, "standardHours": 5, "core": true, "tags": ["SQL", "트랜잭션"] },
+      { "id": "w3-u3", "name": "논리 데이터베이스 설계", "order": 3, "standardHours": 7, "core": true, "tags": ["정규화", "관계대수", "E-R 모델"] },
+      { "id": "w3-u4", "name": "물리 데이터베이스 설계", "order": 4, "standardHours": 4, "core": false, "tags": ["인덱스"] },
+      { "id": "w3-u5", "name": "데이터 전환", "order": 5, "standardHours": 2, "core": false, "tags": ["데이터 전환"] }
+    ] },
+  { "id": "w4", "name": "프로그래밍 언어 활용", "examType": "written", "order": 4,
+    "tags": ["C언어", "Java", "Python", "코드 실행 결과", "운영체제", "네트워크"],
+    "units": [
+      { "id": "w4-u1", "name": "서버 프로그램 구현", "order": 1, "standardHours": 4, "core": false, "tags": ["Java"] },
+      { "id": "w4-u2", "name": "프로그래밍 언어 활용", "order": 2, "standardHours": 8, "core": true, "tags": ["C언어", "Java", "Python", "코드 실행 결과"] },
+      { "id": "w4-u3", "name": "응용 SW 기초 기술 활용", "order": 3, "standardHours": 7, "core": true, "tags": ["운영체제", "네트워크"] }
+    ] },
+  { "id": "w5", "name": "정보시스템 구축관리", "examType": "written", "order": 5,
+    "tags": ["개발 방법론", "비용 산정", "신기술 용어", "보안 취약점", "암호화", "서비스 공격"],
+    "units": [
+      { "id": "w5-u1", "name": "소프트웨어 개발 방법론 활용", "order": 1, "standardHours": 4, "core": false, "tags": ["개발 방법론", "비용 산정"] },
+      { "id": "w5-u2", "name": "IT 프로젝트 정보시스템 구축관리", "order": 2, "standardHours": 5, "core": false, "tags": ["신기술 용어"] },
+      { "id": "w5-u3", "name": "소프트웨어 개발 보안 구축", "order": 3, "standardHours": 5, "core": true, "tags": ["보안 취약점", "암호화"] },
+      { "id": "w5-u4", "name": "시스템 보안 구축", "order": 4, "standardHours": 4, "core": true, "tags": ["서비스 공격"] }
+    ] },
+
+  { "id": "p01", "name": "요구사항 확인", "examType": "practical", "order": 1, "tags": ["요구사항 분석", "UML"],
+    "units": [
+      { "id": "p01-u1", "name": "현행 시스템 분석", "order": 1, "standardHours": 2, "core": false, "tags": ["요구사항 분석"] },
+      { "id": "p01-u2", "name": "요구사항 확인", "order": 2, "standardHours": 2, "core": false, "tags": ["요구사항 분석"] },
+      { "id": "p01-u3", "name": "분석 모델 확인", "order": 3, "standardHours": 3, "core": true, "tags": ["UML"] }
+    ] },
+  { "id": "p02", "name": "데이터 입출력 구현", "examType": "practical", "order": 2, "tags": ["정규화", "E-R 모델", "자료구조"],
+    "units": [
+      { "id": "p02-u1", "name": "논리 데이터 저장소 확인", "order": 1, "standardHours": 3, "core": true, "tags": ["정규화", "E-R 모델"] },
+      { "id": "p02-u2", "name": "물리 데이터 저장소 설계", "order": 2, "standardHours": 2, "core": false, "tags": ["자료구조"] },
+      { "id": "p02-u3", "name": "데이터 조작 프로시저", "order": 3, "standardHours": 2, "core": false, "tags": ["자료구조"] }
+    ] },
+  { "id": "p03", "name": "통합 구현", "examType": "practical", "order": 3, "tags": ["통합 구현", "인터페이스"],
+    "units": [
+      { "id": "p03-u1", "name": "연계 데이터 구성", "order": 1, "standardHours": 1.5, "core": false, "tags": ["통합 구현"] },
+      { "id": "p03-u2", "name": "연계 메커니즘 구성", "order": 2, "standardHours": 1.5, "core": false, "tags": ["인터페이스"] },
+      { "id": "p03-u3", "name": "내외부 연계 모듈 구현", "order": 3, "standardHours": 1.5, "core": false, "tags": ["통합 구현"] }
+    ] },
+  { "id": "p04", "name": "서버 프로그램 구현", "examType": "practical", "order": 4, "tags": ["디자인 패턴", "Java"],
+    "units": [
+      { "id": "p04-u1", "name": "개발 환경 구축", "order": 1, "standardHours": 1.5, "core": false, "tags": ["Java"] },
+      { "id": "p04-u2", "name": "공통 모듈 구현", "order": 2, "standardHours": 2, "core": false, "tags": ["Java"] },
+      { "id": "p04-u3", "name": "디자인 패턴·배치 프로그램", "order": 3, "standardHours": 3, "core": true, "tags": ["디자인 패턴"] }
+    ] },
+  { "id": "p05", "name": "인터페이스 구현", "examType": "practical", "order": 5, "tags": ["인터페이스"],
+    "units": [
+      { "id": "p05-u1", "name": "인터페이스 설계 확인", "order": 1, "standardHours": 1.5, "core": false, "tags": ["인터페이스"] },
+      { "id": "p05-u2", "name": "인터페이스 기능 구현", "order": 2, "standardHours": 1.5, "core": false, "tags": ["인터페이스"] },
+      { "id": "p05-u3", "name": "인터페이스 구현 검증", "order": 3, "standardHours": 1.5, "core": false, "tags": ["인터페이스"] }
+    ] },
+  { "id": "p06", "name": "화면 설계", "examType": "practical", "order": 6, "tags": ["UI 설계"],
+    "units": [
+      { "id": "p06-u1", "name": "UI 요구사항 확인", "order": 1, "standardHours": 1.5, "core": false, "tags": ["UI 설계"] },
+      { "id": "p06-u2", "name": "UI 설계", "order": 2, "standardHours": 1.5, "core": false, "tags": ["UI 설계"] }
+    ] },
+  { "id": "p07", "name": "애플리케이션 테스트 관리", "examType": "practical", "order": 7, "tags": ["테스트 기법"],
+    "units": [
+      { "id": "p07-u1", "name": "테스트 케이스 설계", "order": 1, "standardHours": 3, "core": true, "tags": ["테스트 기법"] },
+      { "id": "p07-u2", "name": "통합 테스트", "order": 2, "standardHours": 2, "core": false, "tags": ["테스트 기법"] },
+      { "id": "p07-u3", "name": "성능 개선", "order": 3, "standardHours": 1.5, "core": false, "tags": ["테스트 기법"] }
+    ] },
+  { "id": "p08", "name": "SQL 응용", "examType": "practical", "order": 8, "tags": ["SQL", "트랜잭션"],
+    "units": [
+      { "id": "p08-u1", "name": "절차형 SQL 작성", "order": 1, "standardHours": 2, "core": false, "tags": ["SQL"] },
+      { "id": "p08-u2", "name": "응용 SQL 작성", "order": 2, "standardHours": 4, "core": true, "tags": ["SQL"] },
+      { "id": "p08-u3", "name": "SQL 활용·트랜잭션", "order": 3, "standardHours": 3, "core": true, "tags": ["SQL", "트랜잭션"] }
+    ] },
+  { "id": "p09", "name": "소프트웨어 개발 보안 구축", "examType": "practical", "order": 9, "tags": ["보안 취약점", "서비스 공격", "암호화"],
+    "units": [
+      { "id": "p09-u1", "name": "소프트웨어 보안 취약성 식별", "order": 1, "standardHours": 3, "core": true, "tags": ["보안 취약점", "서비스 공격"] },
+      { "id": "p09-u2", "name": "소프트웨어 보안 구현", "order": 2, "standardHours": 3, "core": true, "tags": ["암호화"] }
+    ] },
+  { "id": "p10", "name": "프로그래밍 언어 활용", "examType": "practical", "order": 10, "tags": ["C언어", "Java", "Python", "코드 실행 결과"],
+    "units": [
+      { "id": "p10-u1", "name": "기본 문법 활용", "order": 1, "standardHours": 5, "core": true, "tags": ["C언어", "코드 실행 결과"] },
+      { "id": "p10-u2", "name": "언어 특성 활용(Java·Python)", "order": 2, "standardHours": 6, "core": true, "tags": ["Java", "Python", "코드 실행 결과"] },
+      { "id": "p10-u3", "name": "라이브러리 활용", "order": 3, "standardHours": 2, "core": false, "tags": ["Python"] }
+    ] },
+  { "id": "p11", "name": "응용 SW 기초 기술 활용", "examType": "practical", "order": 11, "tags": ["운영체제", "네트워크", "신기술 용어"],
+    "units": [
+      { "id": "p11-u1", "name": "운영체제 기초", "order": 1, "standardHours": 3, "core": true, "tags": ["운영체제"] },
+      { "id": "p11-u2", "name": "데이터베이스 기초", "order": 2, "standardHours": 2, "core": false, "tags": ["정규화"] },
+      { "id": "p11-u3", "name": "네트워크 기초", "order": 3, "standardHours": 3, "core": true, "tags": ["네트워크"] },
+      { "id": "p11-u4", "name": "신기술·개발환경 용어", "order": 4, "standardHours": 2, "core": false, "tags": ["신기술 용어"] }
+    ] },
+  { "id": "p12", "name": "제품소프트웨어 패키징", "examType": "practical", "order": 12, "tags": ["패키징", "형상 관리"],
+    "units": [
+      { "id": "p12-u1", "name": "제품소프트웨어 패키징", "order": 1, "standardHours": 1.5, "core": false, "tags": ["패키징"] },
+      { "id": "p12-u2", "name": "제품소프트웨어 매뉴얼 작성", "order": 2, "standardHours": 1, "core": false, "tags": ["패키징"] },
+      { "id": "p12-u3", "name": "버전 관리", "order": 3, "standardHours": 1.5, "core": false, "tags": ["형상 관리"] }
+    ] }
+]

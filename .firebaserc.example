@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "jcm-dev",
+    "dev": "jcm-dev",
+    "prod": "jcm-prod"
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+.firebaserc
+*-debug.log
+service-account*.json
+server/seed/export/
