@@ -52,18 +52,26 @@ jcm/
 
 ### 준비
 ```bash
-npm i -g firebase-tools          # Firebase CLI (에뮬레이터는 Java 11+ 필요)
+npm i -g firebase-tools          # Firebase CLI (에뮬레이터는 Java 21 이상 필요 — firebase-tools v15부터)
+java -version                    # 21 이상인지 확인. 없으면 JDK 21 설치(아래 "Java 설치" 참고)
 cd server && npm install
 cd ../client && npm install
 cp server/.env.example server/.env
 cp client/.env.example client/.env
-cp .firebaserc.example .firebaserc
 ```
+기본 프로젝트 ID `demo-jcm`처럼 `demo-`로 시작하는 ID는 에뮬레이터 전용이라, Firebase 계정·실제 프로젝트 없이 바로 실행됩니다. (`.firebaserc`는 실제 프로젝트에 배포할 때만 필요)
+
+### Java 설치 (에뮬레이터용)
+Firestore 에뮬레이터는 Java로 동작하며, firebase-tools v15부터 **Java 21 이상**이 필요합니다.
+- Windows: [Eclipse Temurin JDK 21](https://adoptium.net/temurin/releases/?version=21) `.msi` 설치 시 **Set JAVA_HOME**, **Add to PATH**를 켜고, 설치 후 터미널(VS Code 포함)을 완전히 껐다 켭니다. 또는 `winget install EclipseAdoptium.Temurin.21.JDK`
+- macOS: `brew install --cask temurin@21`
+- 확인: `java -version` 이 `21.x` 이상이면 됩니다.
+- `You are not currently authenticated` 경고는 에뮬레이터만 쓸 때는 무시해도 됩니다(`firebase login`으로 없앨 수 있음).
 
 ### 실행 (터미널 3개)
 ```bash
-# ① 에뮬레이터(Auth 9099, Firestore 8080, UI 4400)
-firebase emulators:start --only auth,firestore
+# ① 에뮬레이터(Auth 9099, Firestore 8080, UI 4400) — 저장소 루트(jcm/)에서
+firebase emulators:start --only auth,firestore --project demo-jcm
 
 # ② 서버: 마스터 데이터 + 테스트 계정 5개 시드 후 실행
 cd server
@@ -95,8 +103,8 @@ cd server && npm test     # 단위·통합·시나리오 55개 + 커버리지
 
 ## 3. 배포
 
-1. Firebase 콘솔에서 **개발용·운영용 프로젝트를 분리**해 만들고 Authentication(이메일/비밀번호, Google)과 Firestore를 켭니다.
-2. 규칙·인덱스 배포: `firebase deploy --only firestore:rules,firestore:indexes`
+1. Firebase 콘솔에서 **개발용·운영용 프로젝트를 분리**해 만들고 Authentication(이메일/비밀번호, Google)과 Firestore(위치 `asia-northeast3` 서울, 프로덕션 모드)를 켭니다. `.firebaserc.example`을 `.firebaserc`로 복사해 실제 프로젝트 ID를 넣습니다.
+2. 규칙·인덱스 배포: `firebase deploy --only firestore:rules,firestore:indexes --project prod`
 3. 마스터 데이터: `cd server && node scripts/seed.js --prod` (Q-Net 공고로 시험 일정 확인 후)
 4. **백엔드(Vercel 예시)**: `server/` 폴더를 프로젝트로 연결 → 환경변수 등록
    - `FIREBASE_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_BASE64`(서비스 계정 JSON을 base64로), `CORS_ORIGINS`(클라이언트 도메인), `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, `NODE_ENV=production`
