@@ -1,4 +1,3 @@
-// 클라이언트는 인증만 Firebase SDK로 직접 처리한다(명세 3.5). 학습 데이터는 모두 Express API를 거친다.
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator, GoogleAuthProvider } from 'firebase/auth';
 

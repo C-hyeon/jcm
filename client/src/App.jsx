@@ -8,7 +8,6 @@ import Onboarding from './pages/Onboarding';
 import Schedule from './pages/Schedule';
 import Materials from './pages/Materials';
 
-// 자주 쓰지 않거나 무거운 화면은 지연 로딩(초기 번들 축소)
 const Progress = lazy(() => import('./pages/Progress'));
 const WrongNotes = lazy(() => import('./pages/WrongNotes'));
 const LearningPath = lazy(() => import('./pages/LearningPath'));
