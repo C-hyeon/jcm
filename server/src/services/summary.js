@@ -1,8 +1,5 @@
 'use strict';
-/**
- * 사용자 학습 상태 요약: 과목·단원 진도, 잔여 학습량, 취약 유형, 활성 스케줄.
- * 진도 화면·취약 주제·학습 경로·추천·대시보드가 같은 계산을 공유한다.
- */
+
 const { userRef, userCol, metaRef } = require('../lib/refs');
 const { getSubjects } = require('./masters');
 const { scoresFromStats } = require('./weakness');

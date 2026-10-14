@@ -11,10 +11,7 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Express REST API 호출. 로그인 상태면 Authorization: Bearer {Firebase ID 토큰}을 붙인다.
- * 토큰은 만료 시 SDK가 자동 갱신한다.
- */
+// Express REST API 호출. 로그인 상태면 Authorization: Bearer {Firebase ID 토큰} 삽입. 토큰 만료 시 SDK가 자동 갱신.
 export async function api(path, { method = 'GET', body, signal } = {}) {
   const headers = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';

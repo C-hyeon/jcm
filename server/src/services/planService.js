@@ -1,7 +1,5 @@
 'use strict';
-/**
- * 스케줄 생성·재생성·재배분·조정 (UC-03, UC-04, UC-05 대안) — Firestore 연동부
- */
+// 스케줄 생성·재생성·재배분·조정
 const { db, FieldValue } = require('../config/firebase');
 const { userRef, userCol, metaRef, commitInChunks } = require('../lib/refs');
 const { HttpError } = require('../lib/httpError');
@@ -12,7 +10,6 @@ const { pickForTask } = require('./materialLogic');
 const { subjectRate } = require('./progressCalc');
 const { dayOfWeek } = require('../lib/dates');
 
-/** buildPlan 결과의 과제를 저장용 레코드로 */
 function taskRecord(t, planId, materials, stage) {
   return {
     planId,
@@ -42,7 +39,6 @@ function addTo(map, key, v) {
   if (map[key] <= 0) delete map[key];
 }
 
-/** 비회원 미리보기 / 회원 생성 공통 계산 */
 async function computePlan({ profile, today, unitRates = {}, weakShareBySubject = {} }) {
   const [subjects, materials] = await Promise.all([getSubjects(profile.examType), getMaterials()]);
   if (!subjects.length) throw new HttpError(500, 'MASTER_MISSING', '과목 마스터 데이터가 없습니다. 관리자에게 문의해 주세요.');
@@ -65,7 +61,6 @@ async function computePlan({ profile, today, unitRates = {}, weakShareBySubject 
   return { result, subjects, materials, baseOverallRate };
 }
 
-/** 회원 스케줄 생성/재생성. 기존 스케줄이 있으면 오늘 이후 미완료 과제만 교체 */
 async function generatePlan(uid, { today, confirmOverwrite = false }) {
   const userSnap = await userRef(uid).get();
   const user = userSnap.exists ? userSnap.data() : {};
@@ -126,7 +121,6 @@ async function generatePlan(uid, { today, confirmOverwrite = false }) {
   return { planId: planRef.id, plan, taskCount: result.tasks.length };
 }
 
-/** 하루 한 번만 재배분하도록 날짜 잠금 */
 async function claimRedistribution(planRef, today) {
   return db().runTransaction(async (tx) => {
     const snap = await tx.get(planRef);
@@ -136,7 +130,6 @@ async function claimRedistribution(planRef, today) {
   });
 }
 
-/** 전날까지의 미완료 과제를 남은 학습일에 재배분 (UC-04 ⑤) */
 async function redistributeOverdue(uid, planId, plan, today) {
   const tasksCol = userCol(uid, 'tasks');
   const overdueSnap = await tasksCol.where('planId', '==', planId).where('done', '==', false).where('date', '<', today).get();
@@ -188,9 +181,7 @@ async function redistributeOverdue(uid, planId, plan, today) {
   });
   res.reviewUpdates.forEach((r) => ops.push((b) => b.update(tasksCol.doc(r.id), { minutes: r.minutes })));
   res.reviewDeletes.forEach((id) => ops.push((b) => b.delete(tasksCol.doc(id))));
-  // 지난 총정리 과제는 남은 총정리 일정에 통합(삭제)
   pastReview.forEach((t) => ops.push((b) => b.delete(t.ref)));
-  // 재배분 결과의 usage에는 재배분 대상이 아닌 과거 날짜 값도 그대로 들어 있다
   ops.push((b) => b.update(userCol(uid, 'plans').doc(planId), { usage: res.usage, studyMinutes }));
   await commitInChunks(ops);
 
@@ -203,9 +194,7 @@ async function redistributeOverdue(uid, planId, plan, today) {
   };
 }
 
-/**
- * 진도 화면에서 단원 진도를 올렸을 때 오늘 이후 해당 단원 과제를 줄이거나 삭제(UC-03 대안: 선행 학습 반영)
- */
+// 진도 화면에서 단원 진도를 올렸을 때 오늘 이후 해당 단원 과제를 줄이거나 삭제
 async function adjustFutureTasksForUnit(uid, planId, unitId, oldRate, newRate, today) {
   if (newRate <= oldRate) return { adjusted: 0, deleted: 0 };
   const planRef = userCol(uid, 'plans').doc(planId);

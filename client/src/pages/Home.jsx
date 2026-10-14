@@ -1,7 +1,4 @@
-/**
- * 홈 — 로그인 후 1회 클릭 이내 오늘 할 일 확인(명세 3.1 품질 기준)
- * 화면 순서(벤치마킹: 파워 CBT): 시험일까지 남은 기간 → 학습 시작 분기 → 오늘 할 일 → 과목별 진도 → 취약 주제 → 다음 추천
- */
+// 홈 — 로그인 후 1회 클릭 이내 오늘 할 일 확인 / 화면 순서 : 시험일까지 남은 기간 → 학습 시작 분기 → 오늘 할 일 → 과목별 진도 → 취약 주제 → 다음 추천
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -204,7 +201,7 @@ function MemberHome() {
   );
 }
 
-/* ───────── 비회원: 계획·자료 탐색 먼저, 저장이 필요할 때 가입 제안 ───────── */
+// 비회원
 function GuestHome() {
   const navigate = useNavigate();
   const guest = loadGuest();

@@ -1,7 +1,5 @@
 'use strict';
-/**
- * UC-02 시험 정보·학습 조건 / UC-03 스케줄 / UC-04 오늘 할 일·완료 체크·학습 기록
- */
+// UC-02 시험 정보·학습 조건 / UC-03 스케줄 / UC-04 오늘 할 일·완료 체크·학습 기록
 const express = require('express');
 const { db, FieldValue } = require('../config/firebase');
 const { ah, HttpError } = require('../lib/httpError');
@@ -15,7 +13,6 @@ const { diffDays, isValidDate } = require('../lib/dates');
 
 const router = express.Router();
 
-/* ---------- UC-02 ---------- */
 router.get(
   '/study-profile',
   ah(async (req, res) => {
@@ -31,7 +28,6 @@ router.put(
   ah(async (req, res) => {
     const profile = { ...req.valid };
     if (profile.examId) {
-      // 회차를 선택하면 시험일은 마스터 기준으로 자동 입력
       const exam = (await getExams()).find((e) => e.id === profile.examId);
       if (!exam) throw new HttpError(400, 'VALIDATION_ERROR', '선택한 시험 회차를 찾을 수 없습니다. 시험일을 직접 입력해 주세요.');
       if (exam.type !== profile.examType) throw new HttpError(400, 'VALIDATION_ERROR', '시험 구분과 회차가 맞지 않습니다.');
@@ -50,7 +46,6 @@ router.put(
   }),
 );
 
-/* ---------- UC-03 ---------- */
 router.post(
   '/plans',
   validate(z.object({ confirmOverwrite: z.boolean().optional() })),
@@ -124,7 +119,6 @@ router.get(
   }),
 );
 
-/* ---------- UC-04 오늘 할 일 ---------- */
 router.get(
   '/today',
   ah(async (req, res) => {
@@ -164,7 +158,7 @@ router.get(
   }),
 );
 
-/* ---------- 완료 체크 + 학습 기록(벤치마킹: 이해도·복습 필요 여부) ---------- */
+// 완료 체크 + 학습 기록
 router.patch(
   '/tasks/:id',
   validate(TaskPatchSchema),

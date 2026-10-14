@@ -1,12 +1,5 @@
 'use strict';
-/**
- * 취약도 계산 (UC-06)
- *   취약도_k = Σ_{n∈k} r_n / Σ_{n∈전체} r_n
- *   r = 1.5(최근 14일) / 1.0(그 외) / 0.5(복습 완료)
- *
- * 오답 문서를 매번 전부 읽지 않도록 users/{uid}/meta/wrongStats 문서에
- * (과목|유형) × 등록일 버킷별 {open, reviewed} 개수를 누적한다(일일 읽기 한도 대응).
- */
+// 취약도 계산 (UC-06)
 const { diffDays } = require('../lib/dates');
 
 const RECENT_DAYS = 14;
@@ -21,7 +14,6 @@ function noteWeight(note, today) {
   return diffDays(note.createdDate, today) < RECENT_DAYS ? W_RECENT : W_NORMAL;
 }
 
-/** 오답 1건이 집계에 더할 값(delta=+1 등록, -1 삭제) */
 function statDelta(note, delta) {
   const key = statKey(note.subjectId, note.typeTag);
   const field = note.reviewed ? 'reviewed' : 'open';
@@ -56,7 +48,6 @@ function scoresFromStats(tags, today) {
   return { rows, top3: rows.slice(0, 3), bySubject, total };
 }
 
-/** 오답 원본 목록으로 집계를 다시 만든다(재구축·테스트용) */
 function statsFromNotes(notes) {
   const tags = {};
   for (const n of notes) {

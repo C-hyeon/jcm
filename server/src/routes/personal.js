@@ -1,5 +1,5 @@
 'use strict';
-// 북마크(UC-07 ⑤) / AI 추천(UC-09)
+// 북마크(UC-07) / AI 추천(UC-09)
 const express = require('express');
 const { FieldValue } = require('../config/firebase');
 const { ah, HttpError } = require('../lib/httpError');

@@ -1,8 +1,5 @@
 'use strict';
-/**
- * 비회원도 사용할 수 있는 API
- * 벤치마킹(파워 CBT): 계획 미리보기·자료 탐색을 먼저 허용하고, 기록 저장·동기화가 필요할 때 가입을 제안한다.
- */
+// 비회원도 사용할 수 있는 API
 const express = require('express');
 const { ah, HttpError } = require('../lib/httpError');
 const { validate, ipLimiter, today } = require('../middleware/common');
@@ -88,7 +85,7 @@ router.get(
   }),
 );
 
-// 비회원 스케줄 미리보기(저장하지 않음)
+// 비회원 스케줄 미리보기
 router.post(
   '/plans/preview',
   ipLimiter,

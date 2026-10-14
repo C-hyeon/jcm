@@ -1,4 +1,4 @@
-// UC-01 프로필 관리·로그아웃·회원 탈퇴(재인증 필요)
+// UC-01 프로필 관리·로그아웃·회원 탈퇴
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { EmailAuthProvider, reauthenticateWithCredential, reauthenticateWithPopup, signOut } from 'firebase/auth';

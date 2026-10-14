@@ -1,4 +1,4 @@
-// UC-07 학습 자료 허브 — 메타데이터·출처·링크만 제공, 원문은 새 탭에서 원저작자 사이트로 이동
+// UC-07 학습 자료 허브
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -17,7 +17,6 @@ export default function Materials() {
   const [open, setOpen] = useState(null);
   const subjects = useApi(() => api('/api/subjects'), []);
 
-  // 입력 후 300ms 뒤 검색
   useEffect(() => {
     const t = setTimeout(() => setQ(qInput.trim()), 300);
     return () => clearTimeout(t);

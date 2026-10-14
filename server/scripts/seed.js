@@ -1,11 +1,5 @@
 'use strict';
-/**
- * 초기 마스터 데이터(시험 일정, 과목·단원, 학습 자료 메타데이터) 적재 + 테스트 계정 5개 생성
- *
- *   npm run seed                    # 에뮬레이터에 마스터 데이터
- *   npm run seed:test-users         # + 테스트 계정 5개(시험일까지 30·90·180일, 오답 0·20·100건 등)
- *   node scripts/seed.js --prod     # 운영 프로젝트에 마스터 데이터만(테스트 계정 불가)
- */
+// 초기 마스터 데이터(시험 일정, 과목·단원, 학습 자료 메타데이터) 적재 + 테스트 계정 5개 생성
 require('dotenv').config();
 const { db, auth, FieldValue } = require('../src/config/firebase');
 const { addDays, todayKST } = require('../src/lib/dates');
@@ -42,7 +36,6 @@ async function seedMasters() {
   console.log(`마스터 적재 완료: 시험 ${exams.length}건, 과목 ${subjects.length}개(단원 ${subjects.reduce((a, s) => a + s.units.length, 0)}개), 자료 ${materials.length}건`);
 }
 
-// 재현 가능한 의사 난수
 function prng(seed) {
   let s = seed;
   return () => ((s = (s * 1103515245 + 12345) % 2147483648) / 2147483648);

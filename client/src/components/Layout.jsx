@@ -15,13 +15,12 @@ const NAV = [
   { to: '/recommend', label: 'AI 추천', icon: 'spark' },
   { to: '/dashboard', label: '대시보드', icon: 'chart' },
 ];
-// 모바일 하단 내비게이션(5+더보기)
+
 const BOTTOM = ['/', '/schedule', '/progress', '/wrong-notes', '/materials'];
 
 export default function Layout() {
   const { user, me, isAdmin } = useAuth();
   const { pathname } = useLocation();
-  // 화면 이동 시 맨 위로(이전 화면의 스크롤 위치가 남지 않게)
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
@@ -98,7 +97,7 @@ export default function Layout() {
   );
 }
 
-/** Google 로그인 등으로 가입한 경우 개인정보 수집·이용 동의를 받는다(명세 3.8) */
+// Google 로그인 등으로 가입한 경우 개인정보 수집·이용 동의
 function ConsentGate() {
   const { refreshMe, logout } = useAuth();
   const [saving, setSaving] = useState(false);

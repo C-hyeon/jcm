@@ -6,7 +6,7 @@ import { loadGuest, clearGuest } from '../lib/guest';
 
 const AuthContext = createContext(null);
 
-/** 비회원 때 입력한 시험 정보를 가입 직후 계정으로 옮긴다 */
+// 비회원 때 입력한 시험 정보를 가입 직후 계정으로 옮기기.
 async function migrateGuest(me) {
   const guest = loadGuest();
   if (!guest?.profile || me.hasProfile) return false;

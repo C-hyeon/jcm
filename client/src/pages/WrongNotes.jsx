@@ -1,4 +1,4 @@
-// UC-06 오답·취약 유형 기록 — 드롭다운·태그로 자유 입력 최소화, 문제 본문·이미지는 저장하지 않음
+// UC-06 오답·취약 유형 기록
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';

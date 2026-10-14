@@ -1,10 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Dialog } from './ui';
 
-/**
- * 벤치마킹(파워 CBT): 계획 확인·자료 탐색은 비회원도 가능하고,
- * 학습 기록 저장이나 기기 간 동기화가 필요한 순간에 가입을 제안한다.
- */
+// 벤치마킹 : 계획 확인·자료 탐색은 비회원도 가능하고, 학습 기록 저장이나 기기 간 동기화가 필요한 순간에 가입 제안.
 export default function SignupPrompt({ open, onClose, reason = '학습 기록을 저장하려면' }) {
   const location = useLocation();
   const next = encodeURIComponent(location.pathname);

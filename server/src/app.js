@@ -13,7 +13,6 @@ function createApp() {
   app.use(httpsRedirect);
   app.use(helmet({ hsts: { maxAge: 15552000, includeSubDomains: true } }));
 
-  // CORS는 서비스 도메인만 허용
   const origins = (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',').map((s) => s.trim()).filter(Boolean);
   app.use(
     cors({
@@ -25,10 +24,8 @@ function createApp() {
   );
   app.use(express.json({ limit: '100kb' }));
 
-  // 공개 API(비회원 허용)
   app.use('/api', require('./routes/public'));
 
-  // 이하 모든 API: Firebase ID 토큰 검증 → 사용자별 호출 제한
   const priv = express.Router();
   priv.use(requireAuth, userLimiter, today);
   priv.use(require('./routes/me'));

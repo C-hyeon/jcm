@@ -1,5 +1,6 @@
 'use strict';
-// UC-01 회원 관리: 프로필 조회·수정, 탈퇴(재인증 후 계정과 학습 데이터 즉시 삭제)
+
+// UC-01 회원 관리
 const express = require('express');
 const { db, auth, FieldValue } = require('../config/firebase');
 const { ah, HttpError } = require('../lib/httpError');
@@ -26,7 +27,6 @@ function view(uid, u, isAdmin) {
   };
 }
 
-// 로그인 직후 호출. users 문서가 없으면 생성한다(Google 로그인 포함).
 router.get(
   '/me',
   ah(async (req, res) => {
@@ -69,7 +69,6 @@ router.delete(
   requireRecentAuth(300),
   ah(async (req, res) => {
     const uid = req.user.uid;
-    // users/{uid} 와 모든 하위 컬렉션(과제·진도·오답·북마크·추천 이력 등) 삭제
     await db().recursiveDelete(userRef(uid));
     await auth().deleteUser(uid);
     log('auth.withdraw', { user: hashUid(uid) });

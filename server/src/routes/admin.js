@@ -1,8 +1,6 @@
 'use strict';
-/**
- * UC-08 학습 자료·마스터 관리 (관리자 전용, admin custom claim 필요)
- * 자료는 크롤링하지 않고 관리자가 직접 등록한다. 링크 점검은 응답 상태 확인에 한정.
- */
+
+// UC-08 학습 자료·마스터 관리 (관리자 전용, admin custom claim 필요)
 const express = require('express');
 const { db, FieldValue } = require('../config/firebase');
 const { ah, HttpError } = require('../lib/httpError');
@@ -73,7 +71,7 @@ router.delete(
   }),
 );
 
-/* ---------- 링크 점검: 대상 사이트 부하 방지를 위해 요청 간 1초 간격, 한 번에 최대 20건 ---------- */
+// 링크 점검: 대상 사이트 부하 방지를 위해 요청 간 1초 간격, 한 번에 최대 20건
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function checkUrl(url) {
   const opts = { redirect: 'follow', headers: { 'user-agent': 'JCM-LinkChecker/1.0 (+study platform link health check)' } };
@@ -110,7 +108,7 @@ router.post(
   }),
 );
 
-/* ---------- 시험 일정·과목·단원 마스터 ---------- */
+// 시험 일정·과목·단원 마스터
 router.put(
   '/admin/masters',
   validate(MastersSchema),

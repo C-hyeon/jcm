@@ -1,9 +1,5 @@
 'use strict';
-/**
- * AI 학습 추천 (UC-09)
- * ① 학습 상태 요약(개인 식별정보 제외) ② 후보 자료 ≤20건 ③ AI JSON 응답 ④ 허브 자료 ID 검증
- * AI 20초 초과·오류·JSON 파싱 실패·유효 자료 없음 → 규칙 기반 대체 추천
- */
+// AI 학습 추천 (UC-09)
 const { z } = require('zod');
 const { db, FieldValue } = require('../config/firebase');
 const { userCol, metaRef } = require('../lib/refs');
@@ -44,7 +40,6 @@ const SYSTEM_PROMPT = [
   '5) 다음 JSON 형식으로만 답한다: {"topics":[{"title":"","reason":"","subjectId":"","materialIds":[""]}]}',
 ].join('\n');
 
-/** 사용자별 AI 추천 일일 한도(초과 시 429) */
 async function consumeQuota(uid, today) {
   const ref = metaRef(uid, 'usage');
   return db().runTransaction(async (tx) => {
@@ -60,7 +55,6 @@ async function consumeQuota(uid, today) {
 }
 
 function buildStatePayload(summary, candidates) {
-  // 이메일·닉네임·UID·자유 메모는 넣지 않는다(명세 3.8 AI 요청 데이터 최소화)
   const reviewUnits = summary.subjects.flatMap((s) => s.units.filter((u) => u.needsReview || u.understanding === 1).map((u) => `${s.name} · ${u.name}`));
   return {
     state: {
@@ -93,7 +87,7 @@ async function callAiWithDeadline(provider, payload) {
       return await provider.generate({ ...payload, signal: ctrl.signal, maxTokens: MAX_OUTPUT_TOKENS });
     } catch (e) {
       lastErr = ctrl.signal.aborted ? new Error('ai_timeout') : e;
-      if (ctrl.signal.aborted) break; // 시간 초과면 재시도하지 않음
+      if (ctrl.signal.aborted) break;
     } finally {
       clearTimeout(timer);
     }
@@ -139,7 +133,6 @@ async function recommend(uid, today) {
     const out = await callAiWithDeadline(provider, { system: SYSTEM_PROMPT, user: JSON.stringify(buildStatePayload(summary, candidates)) });
     usage = out.usage;
     const parsed = parseAiText(out.text);
-    // 허브에 없는 자료 ID는 폐기(명세 3.8 AI 응답 검증)
     topics = parsed.topics.map((t) => ({
       title: t.title,
       reason: t.reason,
@@ -152,7 +145,6 @@ async function recommend(uid, today) {
     fallbackReason = e.message === 'ai_timeout' ? 'timeout' : e instanceof SyntaxError || e.name === 'ZodError' ? 'parse_error' : e.message === 'no_valid_material' ? 'invalid_material' : 'error';
     topics = ruleBasedRecommend({ weakTop: summary.weak.top3, subjects: summary.subjects, materials }).topics;
   }
-  // 송·수신 기록: 시각, 사용자 해시, 토큰 사용량, 성공 여부만(요청 본문 미저장)
   log('ai.recommend', { user: hashUid(uid), provider: providerName, ms: Date.now() - started, engine, fallbackReason, tokensIn: usage?.input, tokensOut: usage?.output });
 
   const col = userCol(uid, 'recommendations');
@@ -166,11 +158,10 @@ async function recommend(uid, today) {
     feedback: null,
     createdDate: today,
     createdAt: FieldValue.serverTimestamp(),
-    expireAt: new Date(Date.now() + RETENTION_DAYS * 86400000), // Firestore TTL 정책용
+    expireAt: new Date(Date.now() + RETENTION_DAYS * 86400000),
   };
   await ref.set(rec);
 
-  // 보존 기간(180일) 지난 이력 정리
   const old = await col.where('createdDate', '<', addDays(today, -RETENTION_DAYS)).limit(20).get();
   if (!old.empty) {
     const batch = db().batch();

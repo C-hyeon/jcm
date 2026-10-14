@@ -5,7 +5,7 @@ import { Dialog, ExternalLink, ProgressBar } from './ui';
 import { api } from '../api/client';
 import { ddayLabel, EXAM_TYPE, formatDate, MATERIAL_TYPE, minutesLabel, UNDERSTANDING } from '../lib/format';
 
-/** 시험일까지 남은 기간 */
+// 시험일까지 남은 기간
 export function DdayHero({ exam, today, extra }) {
   if (!exam) return null;
   return (
@@ -22,7 +22,7 @@ export function DdayHero({ exam, today, extra }) {
   );
 }
 
-/** 벤치마킹(정처랩·파워 CBT): 오늘 계획대로 학습 / 자료 탐색으로 바로 시작 */
+// 벤치마킹 : 오늘 계획대로 학습 / 자료 탐색으로 바로 시작
 export function StartChoice({ onPlan, planLabel = '오늘 계획대로 학습' }) {
   return (
     <section className="start-choice" aria-label="학습 시작 방법">
@@ -61,7 +61,7 @@ export function MaterialLinks({ materials }) {
   );
 }
 
-/** 오늘 할 일 카드: 학습 주제, 예상 시간, 체크 항목, 추천 자료 링크 */
+// 오늘 할 일 카드
 export function TaskCard({ task, onChange, onRequireLogin, readOnly = false }) {
   const [logOpen, setLogOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -145,7 +145,7 @@ export function TaskCard({ task, onChange, onRequireLogin, readOnly = false }) {
   );
 }
 
-/** 벤치마킹(정처랩): 완료 여부와 함께 이해도·복습 필요 여부 기록 */
+// 벤치마킹 : 완료 여부와 함께 이해도·복습 필요 여부 기록
 function StudyLogDialog({ open, task, onClose, onSave }) {
   return (
     <Dialog open={open} onClose={onClose} title="학습 기록">
@@ -210,7 +210,7 @@ function StudyLogForm({ task, onClose, onSave }) {
   );
 }
 
-/** 과목별 진도 막대(수치 라벨을 함께 표시) */
+// 과목별 진도 막대
 export function SubjectBars({ subjects, compact = false }) {
   return (
     <ul className={`subject-bars ${compact ? 'compact' : ''}`}>
@@ -227,7 +227,7 @@ export function SubjectBars({ subjects, compact = false }) {
   );
 }
 
-/** 벤치마킹(EBS 단추): 추천 주제·추천 이유·연결된 자료 출처를 한 카드에 */
+// 벤치마킹 : 추천 주제·추천 이유·연결된 자료 출처를 한 카드에
 export function RecommendationCards({ rec, onFeedback }) {
   if (!rec) return null;
   return (

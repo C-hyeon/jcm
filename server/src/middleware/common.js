@@ -4,7 +4,6 @@ const { HttpError } = require('../lib/httpError');
 const { requestToday } = require('../lib/dates');
 const { log } = require('../lib/logger');
 
-/** zod 스키마 검증. 결과는 req.valid 에 담는다 */
 const validate =
   (schema, source = 'body') =>
   (req, _res, next) => {
@@ -29,7 +28,7 @@ const userLimiter = rateLimit({
   legacyHeaders: false,
   handler: limitHandler,
 });
-// 비로그인 공개 API: IP 기준(학교 실습실 NAT를 고려해 조금 넉넉히)
+// 비로그인 공개 API
 const ipLimiter = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: 'draft-7', legacyHeaders: false, handler: limitHandler });
 
 function today(req, _res, next) {
@@ -48,8 +47,6 @@ function notFound(_req, _res, next) {
   next(new HttpError(404, 'NOT_FOUND', '요청한 기능을 찾을 수 없습니다.'));
 }
 
-// 오류 메시지에 스택 트레이스·내부 경로를 노출하지 않는다(명세 3.8)
-// eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, _next) {
   if (err.type === 'entity.too.large') {
     return res.status(400).json({ code: 'PAYLOAD_TOO_LARGE', message: '요청 내용이 너무 큽니다(100KB 이하). 메모 길이를 줄여 주세요.' });

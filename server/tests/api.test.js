@@ -1,6 +1,5 @@
 'use strict';
-// 통합 테스트(인증·검증·오류 형식). Firestore가 필요 없는 경로만 다루며,
-// 데이터 연동 시나리오는 Firebase Emulator + 시드 계정으로 수행한다(README 참고).
+// 통합 테스트(인증·검증·오류 형식)
 const request = require('supertest');
 const { createApp } = require('../src/app');
 

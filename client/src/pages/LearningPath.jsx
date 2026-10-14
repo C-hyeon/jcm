@@ -1,4 +1,4 @@
-// 학습 경로 (벤치마킹: EBS 단추) — 취약 과목을 확인하고 관련 자료를 학습 단계 순서대로 안내
+// 학습 경로 : 취약 과목을 확인하고 관련 자료를 학습 단계 순서대로 안내
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { useApi } from '../hooks/useApi';

@@ -1,9 +1,5 @@
 'use strict';
-/**
- * 마스터·자료 메타데이터를 JSON으로 내보내 GitHub에서 버전 관리한다(명세 3.6 저장 및 백업).
- * 개인 학습 데이터(users/*)는 내보내지 않는다.
- *   node scripts/exportMasters.js  →  seed/export/*.json
- */
+// 마스터·자료 메타데이터를 JSON으로 내보내 GitHub에서 버전 관리
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');

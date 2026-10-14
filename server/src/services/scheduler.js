@@ -1,11 +1,5 @@
 'use strict';
-/**
- * 학습 스케줄 생성·재배분 (UC-03, UC-04) — Firestore와 무관한 순수 로직.
- *
- * 과목(단원) i 배분 시간:  T_i = T × S_i(1 - p_i)w_i / Σ_j S_j(1 - p_j)w_j
- *   T: 남은 학습일 가용 시간 합, S: 표준 학습 시간, p: 진도율, w: 취약 가중치(1.0~1.5)
- * 시험 전 마지막 15% 학습일은 복습·기출 회독(총정리)으로 배정한다.
- */
+// 학습 스케줄 생성·재배분 (UC-03, UC-04)
 const { addDays, dayOfWeek, diffDays } = require('../lib/dates');
 
 const REVIEW_RATIO = 0.15;
@@ -18,7 +12,6 @@ const sum = (arr, f = (x) => x) => arr.reduce((acc, x) => acc + f(x), 0);
 const floorStep = (v) => Math.floor(v / STEP) * STEP;
 const round1 = (v) => Math.round(v * 10) / 10;
 
-/** from ~ 시험 전날 중 학습 요일만 */
 function listStudyDates(from, examDate, studyDays) {
   const days = new Set(studyDays);
   const last = addDays(examDate, -1);
@@ -27,7 +20,7 @@ function listStudyDates(from, examDate, studyDays) {
   return out;
 }
 
-/** 취약 가중치 w (1.0~1.5): 자신감(1 낮음/2 보통/3 높음) + 오답 취약도 비중 */
+// 취약 가중치 w (1.0~1.5)
 function subjectWeight(confidence, weakShare = 0) {
   const bonus = confidence === 1 ? 0.3 : confidence === 2 ? 0.1 : 0;
   return Math.min(1.5, Math.max(1.0, 1 + bonus + 0.5 * (weakShare || 0)));
@@ -39,7 +32,7 @@ function effectiveRate(unit, ctx) {
   return ctx.subjectProgress?.[unit.subjectId] ?? 0;
 }
 
-/** 단원별 필요 학습량(분). 이미 완료(100%)한 단원은 제외 → 선행 학습 중복 배정 방지 */
+// 단원별 필요 학습량(분)
 function computeNeeds(subjects, ctx) {
   const needs = [];
   subjects.forEach((s, si) => {
@@ -64,12 +57,6 @@ function computeNeeds(subjects, ctx) {
   return needs;
 }
 
-/**
- * 가용 시간 T를 단원별로 배분.
- * - T ≥ 필요량: 필요량 × min(T/N, 1.3)
- * - 60% ≤ T/N < 1: 공식 그대로 비례 배분
- * - T/N < 60%: 핵심 단원(core) 가중 2배로 비례 배분하되 단원별 필요량을 넘지 않게(water-filling)
- */
 function allocate(needs, T) {
   const N = sum(needs, (n) => n.need);
   const minutes = new Map();
@@ -102,10 +89,6 @@ function allocate(needs, T) {
   return { minutes, ratio, level, required: N };
 }
 
-/**
- * 단원 큐를 날짜별로 채운다. even=true면 남은 양을 남은 날짜에 고르게 나눈다.
- * 하루 배정량은 capacity를 넘지 않는다.
- */
 function packStudy(queue, dates, capacity, even = true) {
   const tasks = [];
   const items = queue.map((q) => ({ ...q }));
@@ -146,7 +129,6 @@ function packStudy(queue, dates, capacity, even = true) {
   return { tasks, leftover: items.slice(qi).filter((x) => x.minutes > 0) };
 }
 
-/** 분할된 단원에 (1/3) 표기, 단원 전체 계획 시간 기록(진도율 반영 계산용) */
 function finalizeStudyTasks(tasks) {
   const byUnit = new Map();
   tasks.forEach((t) => {
@@ -195,7 +177,6 @@ function buildReviewTasks(dates, subjects, capacity, usedByDate) {
   return tasks;
 }
 
-/** 오늘 할 일 카드의 체크 항목 */
 function checklistFor(t) {
   const items =
     t.type === 'review'
@@ -204,11 +185,6 @@ function checklistFor(t) {
   return items.slice(0, 3).map((text) => ({ text, done: false }));
 }
 
-/**
- * 스케줄 생성
- * @param {object} input { today, examDate, dailyHours, studyDays, subjects[{id,name,units[]}],
- *                         unitRates, subjectProgress, subjectConfidence, weakShareBySubject }
- */
 function buildPlan(input) {
   const { today, examDate, dailyHours, studyDays, subjects } = input;
   const capacity = Math.round(dailyHours * 60);
@@ -251,7 +227,6 @@ function buildPlan(input) {
   let spillTasks = [];
   let unscheduled = [];
   if (main.leftover.length) {
-    // 학습 기간에 못 넣은 분량은 총정리 기간 일부를 대체한다
     const spill = packStudy(main.leftover, reviewDates, capacity, false);
     spillTasks = spill.tasks;
     unscheduled = spill.leftover;
@@ -293,12 +268,6 @@ function buildPlan(input) {
   };
 }
 
-/**
- * 전날까지의 미완료 학습 과제를 남은 학습일에 재배분 (UC-04)
- * - 학습 기간의 빈 시간에 먼저 넣고(분할 가능),
- * - 그래도 넘치면 총정리 기간의 복습 과제 시간을 줄여 대체한다.
- * @returns {moves, creates, reviewUpdates, reviewDeletes, unplaced, usage}
- */
 function redistribute({ overdue, today, studyDates, reviewStartDate, capacity, usage = {}, reviewTasksByDate = {} }) {
   const use = { ...usage };
   const future = studyDates.filter((d) => d >= today);

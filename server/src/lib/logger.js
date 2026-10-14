@@ -1,7 +1,6 @@
 'use strict';
 const crypto = require('crypto');
 
-// 로그에는 토큰·비밀번호·요청 본문을 남기지 않는다. 사용자는 해시로만 기록(명세 3.8).
 function hashUid(uid) {
   if (!uid) return null;
   const salt = process.env.LOG_HASH_SALT || 'jcm-log';

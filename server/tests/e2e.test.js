@@ -1,8 +1,5 @@
 'use strict';
-/**
- * 주요 학습 관리 시나리오 통합 테스트 (인메모리 Firestore 대역 사용)
- * 시험일 입력 → 스케줄 생성 → 오늘 할 일 완료 → 오답 기록 → 재배분 → AI/대체 추천 → 보안·탈퇴
- */
+// 주요 학습 관리 시나리오 통합 테스트
 process.env.ALLOW_DEBUG_TODAY = 'true';
 process.env.AI_PROVIDER = 'mock';
 jest.mock('../src/config/firebase', () => require('./fakeFirebase'));
@@ -119,7 +116,7 @@ describe('시나리오: 수험생 A', () => {
       ids.push(r.body.id);
     }
     const bad = await request(app).post('/api/wrong-notes').set('Authorization', A).send({ subjectId: 'w3', difficulty: 'mid' });
-    expect(bad.status).toBe(400); // 필수 항목 누락
+    expect(bad.status).toBe(400);
     const wrongTag = await request(app).post('/api/wrong-notes').set('Authorization', A).send({ subjectId: 'w3', typeTag: 'UML', difficulty: 'mid' });
     expect(wrongTag.status).toBe(400);
     const longMemo = await request(app).post('/api/wrong-notes').set('Authorization', A).send({ subjectId: 'w3', typeTag: 'SQL', difficulty: 'mid', memo: 'x'.repeat(1001) });
@@ -129,15 +126,12 @@ describe('시나리오: 수험생 A', () => {
     expect(w.body.topTypes.map((t) => t.typeTag)).toEqual(['SQL', '코드 실행 결과', 'UML']);
     expect(w.body.topTypes[0].score).toBe(50); // 3×1.5 / 6×1.5
 
-    // 복습 완료 → 가중치 0.5, 삭제 → 집계 감소
     await request(app).patch(`/api/wrong-notes/${ids[0]}`).set('Authorization', A).send({ reviewed: true }).expect(200);
     await request(app).delete(`/api/wrong-notes/${ids[5]}`).set('Authorization', A).expect(200);
     w = await request(app).get('/api/weakness').set('Authorization', A);
-    // SQL 1.5+1.5+0.5=3.5, 코드 3.0 → 합 6.5
     expect(w.body.topTypes[0].score).toBeCloseTo(53.8, 1);
     expect(w.body.topTypes).toHaveLength(2);
 
-    // 집계 재구축 결과가 같다
     await request(app).post('/api/weakness/rebuild').set('Authorization', A).expect(200);
     const w2 = await request(app).get('/api/weakness').set('Authorization', A);
     expect(w2.body.topTypes).toEqual(w.body.topTypes);
@@ -161,7 +155,6 @@ describe('시나리오: 수험생 A', () => {
     Object.entries(byDate).filter(([d]) => d >= later).forEach(([, m]) => expect(m).toBeLessThanOrEqual(120));
     expect(mine.some((t) => t.carriedOver)).toBe(true);
 
-    // 같은 날 다시 접속하면 재배분하지 않는다
     const again = await request(app).get('/api/today').set('Authorization', A).set('X-Debug-Today', later);
     expect(again.body.redistribution).toBeNull();
   });

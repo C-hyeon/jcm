@@ -8,7 +8,6 @@ const { subjects, materials } = require('./helpers');
 const TODAY = '2026-10-12';
 
 function makeNotes() {
-  // 오답 20건 예시 데이터
   const spec = [
     ['w3', 'SQL', 0, false], ['w3', 'SQL', 1, false], ['w3', 'SQL', 3, false], ['w3', 'SQL', 20, false], ['w3', 'SQL', 30, true],
     ['w3', '정규화', 2, false], ['w3', '정규화', 40, false], ['w3', '정규화', 5, true],
@@ -95,7 +94,6 @@ describe('UC-09 규칙 기반 대체 추천', () => {
   });
   test('학습 경로는 학습 단계 순서', () => {
     const steps = buildLearningPath({ id: 'p10' }, mats);
-    // 자료가 없는 단계는 빼고 1부터 연속 번호
     expect(steps.map((s) => s.step)).toEqual(steps.map((_, i) => i + 1));
     const stageIdx = steps.map((s) => ['intro', 'concept', 'practice', 'final'].indexOf(s.stage));
     expect(stageIdx).toEqual([...stageIdx].sort((a, b) => a - b));

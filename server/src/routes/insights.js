@@ -1,7 +1,5 @@
 'use strict';
-/**
- * UC-05 진도 / 취약 주제(벤치마킹: 정처랩) / 학습 경로(벤치마킹: EBS 단추) / UC-10 학습 현황 시각화
- */
+// UC-05 진도 / UC-10 학습 현황 시각화
 const express = require('express');
 const { FieldValue } = require('../config/firebase');
 const { ah, HttpError } = require('../lib/httpError');
@@ -19,7 +17,6 @@ const { addDays, weekStart } = require('../lib/dates');
 const router = express.Router();
 const pct = (v) => round1(v * 100);
 
-/* ---------- 진도 ---------- */
 router.get(
   '/progress',
   ah(async (req, res) => {
@@ -39,7 +36,6 @@ router.get(
   }),
 );
 
-// 진도 입력 = 선택 학습 결과 저장(명세 3.5: 별도 기능 없이 진도 입력 API로 반영)
 router.put(
   '/progress',
   validate(ProgressPutSchema),
@@ -64,7 +60,6 @@ router.put(
   }),
 );
 
-/* ---------- 취약 주제: 과목별 진도와 취약 항목을 연결 ---------- */
 router.get(
   '/weakness',
   ah(async (req, res) => {
@@ -77,7 +72,6 @@ router.get(
       weakShare: pct(s.weak.bySubject[sub.id] || 0),
       reviewUnits: sub.units.filter((u) => u.needsReview || u.understanding === 1).map((u) => ({ id: u.id, name: u.name, rate: u.rate })),
     }));
-    // 다음에 무엇을 복습할지: 취약 유형 → 복습 필요 단원 → 취약 비중 높고 진도 낮은 과목
     const nextReview = [];
     topTypes.forEach((t) =>
       nextReview.push({ kind: 'type', subjectId: t.subjectId, label: `${t.subjectName} · ${t.typeTag}`, reason: `오답 취약도 ${t.score}% (${t.count}건)` }),
@@ -98,7 +92,6 @@ router.get(
   }),
 );
 
-// 집계 문서가 어긋났을 때 오답 원본으로 다시 계산
 router.post(
   '/weakness/rebuild',
   ah(async (req, res) => {
@@ -109,7 +102,6 @@ router.post(
   }),
 );
 
-/* ---------- 학습 경로 ---------- */
 router.get(
   '/learning-path',
   validate(z.object({ subjectId: z.string().max(60).optional() }), 'query'),
@@ -141,7 +133,7 @@ router.get(
   }),
 );
 
-/* ---------- UC-10 대시보드 ---------- */
+// UC-10 대시보드
 const statsCache = new Map();
 router.get(
   '/stats',
@@ -154,7 +146,6 @@ router.get(
     if (hit && Date.now() - hit.at < 60_000) return res.json(hit.value);
 
     const s = await getLearningSummary(uid, { today: req.today, withPlan: true });
-    // 스케줄을 만들기 전 주는 표시하지 않는다
     const planStart = s.plan?.createdDate ? weekStart(s.plan.createdDate) : null;
     let from = period === '4w' ? weekStart(addDays(req.today, -21)) : planStart || weekStart(addDays(req.today, -21));
     if (planStart && planStart > from) from = planStart;
@@ -169,7 +160,6 @@ router.get(
       return { week: w, scheduled: inWeek.length, done, rate: inWeek.length ? round1((done / inWeek.length) * 100) : null };
     });
 
-    // 잔여 학습량 추이: 활성 스케줄의 계획 대비 실제
     let remaining = [];
     if (s.plan) {
       const planTasks = tasks.filter((t) => t.planId === s.plan.id && t.type === 'study');

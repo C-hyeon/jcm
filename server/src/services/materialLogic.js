@@ -1,8 +1,5 @@
 'use strict';
-/**
- * 자료 선택·학습 경로·규칙 기반 추천 — 순수 로직
- * 추천 결과는 항상 허브에 등록된 자료 ID로만 구성된다.
- */
+// 자료 선택·학습 경로·규칙 기반 추천 — 순수 로직
 const STAGE_ORDER = ['intro', 'concept', 'practice', 'final'];
 const STAGE_LABEL = { intro: '입문', concept: '개념 학습', practice: '문제 풀이', final: '총정리' };
 
@@ -13,7 +10,6 @@ const stageDist = (a, b) => {
   return i < 0 || j < 0 ? 1 : Math.abs(i - j);
 };
 
-/** 오늘 할 일 카드에 붙일 자료 1~3개 */
 function pickForTask(task, materials, userStage = 'concept', max = 3) {
   const scored = materials.filter(usable).map((m) => {
     let s = 0;
@@ -32,7 +28,6 @@ function pickForTask(task, materials, userStage = 'concept', max = 3) {
     .map(([m]) => m.id);
 }
 
-/** AI에 넘길 후보 자료(최대 20건): 취약 과목·진도 낮은 과목·기출 자료 우선 */
 function selectCandidates({ materials, weakTop = [], subjects = [], max = 20 }) {
   const subjectIds = new Set(subjects.map((s) => s.id));
   const weakSubjects = new Map(weakTop.map((w, i) => [w.subjectId, 3 - i]));
@@ -54,10 +49,6 @@ function selectCandidates({ materials, weakTop = [], subjects = [], max = 20 }) 
     .map(([m]) => m);
 }
 
-/**
- * 규칙 기반 대체 추천(UC-09 대안): 취약도 상위 유형 + 진도 낮은 과목의 자료
- * @param subjects [{id,name,rate,units:[{id,name,rate,needsReview,understanding}]}]
- */
 function ruleBasedRecommend({ weakTop = [], subjects = [], materials = [] }) {
   const pool = materials.filter(usable);
   const used = new Set();
@@ -72,7 +63,6 @@ function ruleBasedRecommend({ weakTop = [], subjects = [], materials = [] }) {
   const topics = [];
   const pct = (v) => `${Math.round(v * 100)}%`;
 
-  // 1) 가장 취약한 유형
   weakTop.slice(0, 2).forEach((w) => {
     if (topics.length >= 3) return;
     let ids = forSubject(w.subjectId, w.typeTag);
@@ -85,7 +75,6 @@ function ruleBasedRecommend({ weakTop = [], subjects = [], materials = [] }) {
     });
   });
 
-  // 2) 복습 필요로 표시한 단원
   const reviewUnit = subjects.flatMap((s) => s.units.filter((u) => u.needsReview || u.understanding === 1).map((u) => ({ s, u })))[0];
   if (reviewUnit && topics.length < 3) {
     topics.push({
@@ -96,7 +85,6 @@ function ruleBasedRecommend({ weakTop = [], subjects = [], materials = [] }) {
     });
   }
 
-  // 3) 진도가 가장 낮은 과목의 다음 단원
   const lowest = subjects.slice().sort((a, b) => a.rate - b.rate)[0];
   if (lowest && topics.length < 3) {
     const nextUnit = lowest.units.slice().sort((a, b) => a.rate - b.rate)[0];
@@ -108,7 +96,6 @@ function ruleBasedRecommend({ weakTop = [], subjects = [], materials = [] }) {
     });
   }
 
-  // 4) 공개 기출·CBT 회독
   if (topics.length < 3) {
     const sid = weakTop[0]?.subjectId || lowest?.id || null;
     topics.push({
@@ -121,7 +108,6 @@ function ruleBasedRecommend({ weakTop = [], subjects = [], materials = [] }) {
   return { topics: topics.slice(0, 3) };
 }
 
-/** 학습 경로(벤치마킹: EBS 단추) — 취약 과목의 자료를 학습 단계 순서로 안내 */
 function buildLearningPath(subject, materials) {
   const list = materials.filter(usable).filter((m) => m.subjectId === subject.id || (!m.subjectId && m.type === 'cbt'));
   return STAGE_ORDER.map((stage) => ({
@@ -133,7 +119,6 @@ function buildLearningPath(subject, materials) {
     .map((s, i) => ({ step: i + 1, ...s }));
 }
 
-/** 학습 경로 기본 과목: 취약 비중·낮은 진도를 함께 고려 */
 function pickFocusSubject(subjects, weakBySubject = {}) {
   return subjects
     .map((s) => ({ s, score: (weakBySubject[s.id] || 0) * 60 + (100 - s.rate) * 0.4 }))

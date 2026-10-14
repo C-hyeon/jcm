@@ -1,4 +1,4 @@
-// UC-08 학습 자료·마스터 관리 (관리자 전용)
+// UC-08 학습 자료·마스터 관리
 import { useEffect, useState } from 'react';
 import { api } from '../api/client';
 import { useApi } from '../hooks/useApi';

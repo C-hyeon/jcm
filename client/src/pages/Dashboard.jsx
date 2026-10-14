@@ -1,4 +1,4 @@
-// UC-10 학습 현황 시각화 — 차트는 색 외에 수치 라벨을 함께 표시(접근성)
+// UC-10 학습 현황 시각화
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, LabelList, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';

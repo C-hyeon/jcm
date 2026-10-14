@@ -1,4 +1,4 @@
-// UC-05 진도 체크 — 스케줄 순서와 관계없이 원하는 단원을 골라 진행률 입력(선택 학습 반영)
+// UC-05 진도 체크
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, apiWithConfirm } from '../api/client';

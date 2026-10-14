@@ -1,9 +1,5 @@
 'use strict';
-/**
- * UC-06 오답·취약 유형 기록 CRUD
- * 문제 본문·이미지는 저장하지 않고 출처(회차·문항 번호·링크)와 본인 메모만 저장한다.
- * 등록·수정·삭제 시 wrongStats 집계를 같은 트랜잭션에서 갱신한다.
- */
+// UC-06 오답·취약 유형 기록 CRUD
 const express = require('express');
 const { db, FieldValue } = require('../config/firebase');
 const { ah, HttpError } = require('../lib/httpError');

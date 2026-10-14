@@ -2,7 +2,6 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Icon from './Icon';
 
-/** 로딩이 1초를 넘으면 스켈레톤을 보여준다(명세 3.5 사용자 인터페이스) */
 export function Loading({ lines = 3, label = '불러오는 중' }) {
   const [show, setShow] = useState(false);
   useEffect(() => {
@@ -23,7 +22,6 @@ export function Loading({ lines = 3, label = '불러오는 중' }) {
   );
 }
 
-/** 오류 원인과 다음 행동을 한국어로 안내 */
 export function ErrorBox({ error, onRetry }) {
   const location = useLocation();
   if (!error) return null;
@@ -69,7 +67,6 @@ export function EmptyState({ title, children, action }) {
   );
 }
 
-/** 네이티브 <dialog> 기반 모달(Esc 닫기·포커스 이동 기본 제공) */
 export function Dialog({ open, onClose, title, children, wide = false }) {
   const ref = useRef(null);
   const titleId = useId();
@@ -113,7 +110,7 @@ export function PageHeader({ title, desc, actions }) {
   );
 }
 
-/** 외부 자료 링크: 새 탭, noopener noreferrer, 출처 표시 */
+// 외부 자료 링크
 export function ExternalLink({ href, children, className = '' }) {
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className={className}>

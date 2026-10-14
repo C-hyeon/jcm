@@ -3,7 +3,7 @@ const { buildPlan, redistribute, allocate, listStudyDates, subjectWeight } = req
 const { addDays } = require('../src/lib/dates');
 const { subjects } = require('./helpers');
 
-const TODAY = '2026-10-12'; // 월요일
+const TODAY = '2026-10-12';
 const WEEKDAYS = [1, 2, 3, 4, 5];
 
 function sumByDate(tasks) {
@@ -29,7 +29,6 @@ describe('UC-03 스케줄 생성 — 시험일까지 30·90·180일 예시 데�
     subs.flatMap((s) => s.units).forEach((u) => expect(scheduledUnits.has(u.id)).toBe(true));
     expect(plan.warnings.find((w) => w.code === 'UNSCHEDULED_UNITS')).toBeUndefined();
 
-    // 마지막 15% 학습일은 총정리
     plan.tasks.filter((t) => t.date >= plan.reviewStartDate && t.type === 'review').forEach((t) => expect(t.title).toMatch('총정리'));
     expect(plan.tasks.some((t) => t.type === 'review')).toBe(true);
   });
@@ -50,7 +49,6 @@ describe('UC-03 스케줄 생성 — 시험일까지 30·90·180일 예시 데�
     const plan = buildPlan({ today: TODAY, examDate: addDays(TODAY, 14), dailyHours: 1, studyDays: WEEKDAYS, subjects: subjects('written') });
     expect(plan.warnings.map((w) => w.code)).toContain('TIME_SHORTAGE');
     const minutesOf = (id) => plan.tasks.filter((t) => t.unitId === id).reduce((a, t) => a + t.minutes, 0);
-    // 같은 표준시간(6h)이라도 core 단원이 더 많이 배정
     expect(minutesOf('w1-u1')).toBeGreaterThan(minutesOf('w2-u4') * 0.9);
   });
 

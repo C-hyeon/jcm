@@ -1,9 +1,5 @@
 'use strict';
-/**
- * 테스트용 인메모리 Firestore/Auth 대역.
- * 실제 데이터 연동 검증은 Firebase Emulator로 하되(README), CI·로컬에서 에뮬레이터 없이도
- * 라우트의 쿼리·트랜잭션·병합 쓰기·하위 컬렉션 삭제 흐름을 검증하기 위해 사용한다.
- */
+
 const crypto = require('crypto');
 
 class Increment {

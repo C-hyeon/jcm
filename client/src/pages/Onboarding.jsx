@@ -1,8 +1,4 @@
-/**
- * UC-02 시험 정보 및 학습 조건 입력
- * 벤치마킹(EBS 단추): 학년 대신 시험 단계·남은 기간·과목별 자신감을 입력받는다.
- * 비회원은 서버 미리보기로 스케줄을 받아 이 브라우저에 보관한다.
- */
+// UC-02 시험 정보 및 학습 조건 입력
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, apiWithConfirm } from '../api/client';
@@ -35,7 +31,6 @@ export default function Onboarding() {
   const subjects = useApi(() => api(`/api/subjects?examType=${form.examType}`), [form.examType]);
   const existing = useApi(user ? () => api('/api/study-profile') : null, [user]);
 
-  // 저장된 조건이 있으면 불러와 수정
   useEffect(() => {
     const p = existing.data?.profile;
     if (!p) return;

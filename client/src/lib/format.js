@@ -1,4 +1,3 @@
-// 표시용 상수·포맷 (날짜는 Asia/Seoul 기준 YYYY-MM-DD)
 export const EXAM_TYPE = { written: '필기', practical: '실기' };
 export const STAGE = { intro: '입문', concept: '개념 학습', practice: '문제 풀이', final: '총정리' };
 export const STAGE_DESC = {
@@ -46,7 +45,6 @@ export function minutesLabel(m) {
 }
 export const pct = (v) => (v == null ? '-' : `${Number(v).toFixed(1)}%`);
 
-/** 월간 달력(일요일 시작) 날짜 배열 */
 export function monthGrid(anchor) {
   const [y, m] = anchor.split('-').map(Number);
   const first = `${y}-${String(m).padStart(2, '0')}-01`;

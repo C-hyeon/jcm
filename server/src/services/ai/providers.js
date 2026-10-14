@@ -1,12 +1,4 @@
 'use strict';
-/**
- * AI API 어댑터 — Gemini / Claude / OpenAI 중 1종을 AI_PROVIDER 환경변수로 선택한다.
- * 어댑터 구조라 제공사를 바꿔도 추천 서비스 코드는 그대로다(명세 3.10).
- * 서버에서만 호출하며 API Key는 환경변수(AI_API_KEY)로만 관리한다.
- * ※ 모델명(AI_MODEL)은 선정 시점의 각 제공사 공식 문서에서 확인해 지정한다.
- *
- * 공통 인터페이스: generate({ system, user, signal, maxTokens }) → { text, usage: { input, output } }
- */
 
 async function postJson(url, headers, body, signal) {
   const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body), signal });
@@ -79,7 +71,6 @@ const openai = {
   },
 };
 
-/** 로컬·테스트용 모의 응답(명세 3.7 테스트 환경: AI API는 mock 사용) */
 const mock = {
   async generate({ user }) {
     const payload = JSON.parse(user);

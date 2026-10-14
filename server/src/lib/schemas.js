@@ -88,7 +88,7 @@ const WrongNotePatchSchema = z
   })
   .refine((o) => Object.keys(o).length > 0, '변경할 항목이 없습니다.');
 
-// 자료 등록 폼에는 본문 필드를 두지 않는다(저작권 제약). 알 수 없는 키는 zod가 제거한다.
+
 const MaterialSchema = z.object({
   title: z.string().trim().min(2, '제목은 2자 이상 입력해 주세요.').max(100),
   sourceName: z.string().trim().min(1, '출처(사이트/채널명)는 필수입니다.').max(60),

@@ -1,8 +1,5 @@
 'use strict';
-/**
- * 마스터 데이터(시험 일정, 과목·단원, 학습 자료 메타데이터) 조회 + 메모리 캐시.
- * 모든 사용자가 공통으로 읽는 데이터라 캐시로 Firestore 일일 읽기를 크게 줄인다.
- */
+// 마스터 데이터(시험 일정, 과목·단원, 학습 자료 메타데이터) 조회 + 메모리 캐시.
 const { db } = require('../config/firebase');
 
 const TTL = 5 * 60 * 1000;
@@ -78,7 +75,6 @@ async function getAllMaterials() {
     return snap.docs.map((d) => normalizeMaterial(d.id, d.data()));
   });
 }
-/** 사용자에게 보이는 자료: 공개 + 링크 점검 실패 제외 */
 async function getMaterials() {
   return (await getAllMaterials()).filter((m) => m.visible && m.linkStatus !== 'broken');
 }
@@ -86,7 +82,6 @@ async function getMaterialMap() {
   return new Map((await getAllMaterials()).map((m) => [m.id, m]));
 }
 
-/** 화면에 내려줄 자료 요약(출처·저작자 항상 포함) */
 function materialCard(m) {
   if (!m) return null;
   return { id: m.id, title: m.title, sourceName: m.sourceName, author: m.author, url: m.url, type: m.type, stage: m.stage, subjectId: m.subjectId };

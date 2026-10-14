@@ -1,4 +1,3 @@
-// 간단한 선 아이콘. 장식용이면 aria-hidden, 의미가 있으면 label을 준다.
 const PATHS = {
   home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
   calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',

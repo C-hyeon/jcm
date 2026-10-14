@@ -1,10 +1,5 @@
 'use strict';
-/**
- * 관리자 권한 부여/해제 (Firebase custom claim)
- *   node scripts/setAdmin.js someone@example.com
- *   node scripts/setAdmin.js someone@example.com --remove
- * 관리자 계정은 팀원 2명으로 제한한다(명세 3.8). 적용 후 해당 사용자는 다시 로그인해야 한다.
- */
+// 관리자 권한 부여/해제
 require('dotenv').config();
 const { auth, db } = require('../src/config/firebase');
 

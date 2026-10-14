@@ -37,7 +37,7 @@ function requireAuth(req, _res, next) {
     });
 }
 
-/** 비회원도 쓸 수 있는 기능(자료 허브 등): 토큰이 있으면 사용자 정보를 붙인다 */
+// 비회원도 쓸 수 있는 기능(자료 허브 등)
 function optionalAuth(req, _res, next) {
   const token = extractToken(req);
   if (!token) return next();
@@ -49,7 +49,6 @@ function optionalAuth(req, _res, next) {
     .catch(() => next());
 }
 
-/** /api/admin/* : admin custom claim이 없으면 403 */
 function requireAdmin(req, _res, next) {
   if (!req.user?.admin) {
     log('auth.denied', { status: 403, path: req.path, user: hashUid(req.user?.uid) });
@@ -58,7 +57,7 @@ function requireAdmin(req, _res, next) {
   next();
 }
 
-/** 탈퇴 등 민감 작업은 최근 재인증(기본 5분 이내)을 요구 */
+// 탈퇴 등 민감 작업은 최근 재인증(기본 5분 이내) 요구
 function requireRecentAuth(maxAgeSec = 300) {
   return (req, _res, next) => {
     const now = Math.floor(Date.now() / 1000);
