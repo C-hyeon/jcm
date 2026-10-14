@@ -1,5 +1,5 @@
 // 홈 — 로그인 후 1회 클릭 이내 오늘 할 일 확인 / 화면 순서 : 시험일까지 남은 기간 → 학습 시작 분기 → 오늘 할 일 → 과목별 진도 → 취약 주제 → 다음 추천
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../hooks/useApi';
@@ -31,6 +31,12 @@ function MemberHome() {
   const progress = useApi(ready ? () => api('/api/progress') : null, [ready]);
   const weakness = useApi(ready ? () => api('/api/weakness') : null, [ready]);
   const recs = useApi(ready ? () => api('/api/recommendations?limit=1') : null, [ready]);
+  const lastProgress = useRef(null);
+  const lastWeakness = useRef(null);
+  useEffect(() => {
+    if (progress.data) lastProgress.current = progress.data;
+    if (weakness.data) lastWeakness.current = weakness.data;
+  }, [progress.data, weakness.data]);
   const [recBusy, setRecBusy] = useState(false);
   const [recErr, setRecErr] = useState(null);
 
@@ -63,7 +69,15 @@ function MemberHome() {
     );
   }
 
-  const updateTask = (t) => today.setData((prev) => ({ ...prev, tasks: prev.tasks.map((x) => (x.id === t.id ? t : x)) }));
+  const updateTask = (t, updatedProgress) => {
+    today.setData((prev) => ({ ...prev, tasks: prev.tasks.map((x) => (x.id === t.id ? t : x)) }));
+    if (updatedProgress) {
+      progress.reload();
+      weakness.reload();
+    }
+  };
+  const progressData = progress.data || lastProgress.current;
+  const weaknessData = weakness.data || lastWeakness.current;
   const latestRec = recs.data?.items?.[0];
   const doneCount = d.tasks.filter((t) => t.done).length;
   const totalMin = d.tasks.reduce((a, t) => a + t.minutes, 0);
@@ -138,15 +152,15 @@ function MemberHome() {
           </div>
           {progress.loading && <Loading />}
           {progress.error && <ErrorBox error={progress.error} onRetry={progress.reload} />}
-          {progress.data && (
+          {progressData && (
             <>
               <p className="big-num">
-                {progress.data.overall.toFixed(1)}%<span className="muted small"> 전체 · 남은 학습 {minutesLabel(progress.data.remainingMinutes)}</span>
+                {progressData.overall.toFixed(1)}%<span className="muted small"> 전체 · 남은 학습 {minutesLabel(progressData.remainingMinutes)}</span>
               </p>
-              <SubjectBars subjects={progress.data.subjects} compact />
-              {progress.data.suggestRegenerate && (
+              <SubjectBars subjects={progressData.subjects} compact />
+              {progressData.suggestRegenerate && (
                 <Notice tone="warn">
-                  계획 대비 진도 차이가 {Math.abs(progress.data.gap).toFixed(1)}%p예요. <Link to="/schedule">스케줄을 다시 만들어 보세요.</Link>
+                  계획 대비 진도 차이가 {Math.abs(progressData.gap).toFixed(1)}%p예요. <Link to="/schedule">스케줄을 다시 만들어 보세요.</Link>
                 </Notice>
               )}
             </>
@@ -162,10 +176,10 @@ function MemberHome() {
           </div>
           {weakness.loading && <Loading />}
           {weakness.error && <ErrorBox error={weakness.error} onRetry={weakness.reload} />}
-          {weakness.data &&
-            (weakness.data.nextReview.length ? (
+          {weaknessData &&
+            (weaknessData.nextReview.length ? (
               <ol className="weak-list">
-                {weakness.data.nextReview.map((n, i) => (
+                {weaknessData.nextReview.map((n, i) => (
                   <li key={i}>
                     <Link to={`/path?subjectId=${n.subjectId}`}>
                       <strong>{n.label}</strong>

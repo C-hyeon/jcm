@@ -20,7 +20,19 @@ const ERR = {
   'auth/network-request-failed': '네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
 };
 const msg = (e) => ERR[e.code] || '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
-const safeNext = (n) => (n && n.startsWith('/') && !n.startsWith('//') ? n : '/');
+const NEXT_PATHS = new Set(['/', '/onboarding', '/schedule', '/materials', '/more', '/progress', '/wrong-notes', '/path', '/recommend', '/dashboard', '/profile', '/admin']);
+
+function safeNext(n) {
+  if (typeof n !== 'string' || !n.startsWith('/') || n.startsWith('//') || /[\\\u0000-\u0020\u007f]/.test(n)) return '/';
+  try {
+    const target = new URL(n, window.location.origin);
+    const pathname = target.pathname.replace(/\/+$/, '') || '/';
+    if (target.origin !== window.location.origin || !NEXT_PATHS.has(pathname)) return '/';
+    return `${pathname}${target.search}${target.hash}`;
+  } catch {
+    return '/';
+  }
+}
 
 function AuthShell({ title, children }) {
   return (

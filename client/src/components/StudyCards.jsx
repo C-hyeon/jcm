@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon';
 import { Dialog, ExternalLink, ProgressBar } from './ui';
@@ -66,19 +66,43 @@ export function TaskCard({ task, onChange, onRequireLogin, readOnly = false }) {
   const [logOpen, setLogOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
+  const pending = useRef(false);
 
   async function patch(body) {
-    if (onRequireLogin) return onRequireLogin();
+    if (onRequireLogin) {
+      onRequireLogin();
+      return false;
+    }
+    if (pending.current) return false;
+    pending.current = true;
     setBusy(true);
     setErr(null);
     try {
       const res = await api(`/api/tasks/${task.id}`, { method: 'PATCH', body });
       onChange?.(res.task, res.progress);
+      return true;
     } catch (e) {
       setErr(e.message);
+      return false;
     } finally {
+      pending.current = false;
       setBusy(false);
     }
+  }
+
+  function openLog() {
+    setErr(null);
+    setLogOpen(true);
+  }
+  function closeLog(e) {
+    if (pending.current) {
+      e?.preventDefault();
+      return;
+    }
+    setLogOpen(false);
+  }
+  async function saveLog(body) {
+    if (await patch(body)) setLogOpen(false);
   }
 
   const toggleCheck = (i) => patch({ checklist: task.checklist.map((c, k) => (k === i ? { ...c, done: !c.done } : c)) });
@@ -117,7 +141,7 @@ export function TaskCard({ task, onChange, onRequireLogin, readOnly = false }) {
           {task.needsReview ? ' · 복습 필요' : ''}
         </p>
       )}
-      {err && (
+      {err && !logOpen && (
         <p className="field-error" role="alert">
           {err}
         </p>
@@ -125,12 +149,12 @@ export function TaskCard({ task, onChange, onRequireLogin, readOnly = false }) {
       {!readOnly && (
         <div className="task-actions">
           {!task.done ? (
-            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => (onRequireLogin ? onRequireLogin() : setLogOpen(true))}>
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={() => (onRequireLogin ? onRequireLogin() : openLog())}>
               <Icon name="check" /> 완료하고 기록
             </button>
           ) : (
             <>
-              <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => setLogOpen(true)}>
+              <button type="button" className="btn btn-ghost" disabled={busy} onClick={openLog}>
                 기록 수정
               </button>
               <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => patch({ done: false })}>
@@ -140,31 +164,42 @@ export function TaskCard({ task, onChange, onRequireLogin, readOnly = false }) {
           )}
         </div>
       )}
-      <StudyLogDialog open={logOpen} task={task} onClose={() => setLogOpen(false)} onSave={(body) => patch(body).then(() => setLogOpen(false))} />
+      <StudyLogDialog open={logOpen} task={task} error={err} onClose={closeLog} onSave={saveLog} />
     </article>
   );
 }
 
 // 벤치마킹 : 완료 여부와 함께 이해도·복습 필요 여부 기록
-function StudyLogDialog({ open, task, onClose, onSave }) {
+function StudyLogDialog({ open, task, error, onClose, onSave }) {
   return (
     <Dialog open={open} onClose={onClose} title="학습 기록">
-      <StudyLogForm task={task} onClose={onClose} onSave={onSave} />
+      <StudyLogForm task={task} error={error} onClose={onClose} onSave={onSave} />
     </Dialog>
   );
 }
 
-function StudyLogForm({ task, onClose, onSave }) {
+function StudyLogForm({ task, error, onClose, onSave }) {
   const [minutes, setMinutes] = useState(task.actualMinutes ?? task.minutes);
   const [understanding, setUnderstanding] = useState(task.understanding ?? 2);
   const [needsReview, setNeedsReview] = useState(task.needsReview ?? false);
   const [saving, setSaving] = useState(false);
+  const pending = useRef(false);
+  const saveButton = useRef(null);
+  useEffect(() => {
+    if (error && !saving) saveButton.current?.focus();
+  }, [error, saving]);
 
   async function submit(e) {
     e.preventDefault();
+    if (pending.current) return;
+    pending.current = true;
     setSaving(true);
-    await onSave({ done: true, actualMinutes: Number(minutes) || 0, understanding, needsReview });
-    setSaving(false);
+    try {
+      await onSave({ done: true, actualMinutes: Number(minutes) || 0, understanding, needsReview });
+    } finally {
+      pending.current = false;
+      setSaving(false);
+    }
   }
 
   return (
@@ -172,9 +207,9 @@ function StudyLogForm({ task, onClose, onSave }) {
         <p className="muted">{task.title}</p>
         <label className="field">
           <span>실제 학습 시간(분)</span>
-          <input type="number" min="0" max="720" step="5" value={minutes} onChange={(e) => setMinutes(e.target.value)} />
+          <input type="number" min="0" max="720" step="5" value={minutes} disabled={saving} onChange={(e) => setMinutes(e.target.value)} />
         </label>
-        <fieldset className="field">
+        <fieldset className="field" disabled={saving}>
           <legend>이해도</legend>
           <div className="seg">
             {[1, 2, 3].map((v) => (
@@ -195,14 +230,15 @@ function StudyLogForm({ task, onClose, onSave }) {
           </div>
         </fieldset>
         <label className="check-row">
-          <input type="checkbox" checked={needsReview} onChange={(e) => setNeedsReview(e.target.checked)} />
+          <input type="checkbox" checked={needsReview} disabled={saving} onChange={(e) => setNeedsReview(e.target.checked)} />
           <span>복습이 필요해요 (취약 주제와 추천에 반영됩니다)</span>
         </label>
+        {error && <p className="field-error" role="alert">{error}</p>}
         <div className="row-end">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <button type="button" className="btn btn-ghost" disabled={saving} onClick={onClose}>
             취소
           </button>
-          <button type="submit" className="btn btn-primary" disabled={saving}>
+          <button ref={saveButton} type="submit" className="btn btn-primary" disabled={saving}>
             {saving ? '저장 중…' : '완료로 저장'}
           </button>
         </div>
