@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  cacheDir: process.env.JCM_VITE_CACHE_DIR || 'node_modules/.vite',
   server: {
     port: 5173,
     // 로컬 개발: /api 요청을 Express 서버로 전달

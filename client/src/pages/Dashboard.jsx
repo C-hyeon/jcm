@@ -8,6 +8,7 @@ import { formatDate, pct } from '../lib/format';
 import { EmptyState, ErrorBox, Loading, PageHeader } from '../components/ui';
 
 const C = { primary: '#0f5c55', accent: '#c2410c', soft: '#94a3b8', grid: '#e7e5df', ink: '#334155' };
+const TOOLTIP_PROPS = { wrapperStyle: { maxWidth: '100%' }, contentStyle: { whiteSpace: 'normal' } };
 const shortDate = (d) => formatDate(d, false).replace('월 ', '/').replace('일', '');
 
 export default function Dashboard() {
@@ -15,7 +16,7 @@ export default function Dashboard() {
   const q = useApi(() => api(`/api/stats?period=${period}`), [period]);
 
   return (
-    <div className="stack">
+    <div className="stack dashboard-page">
       <PageHeader
         title="학습 현황"
         desc="진도율, 잔여 학습량, 과목별 취약도, 주간 달성률로 남은 준비 상태를 확인하세요."
@@ -100,7 +101,7 @@ function Charts({ d }) {
               <CartesianGrid horizontal={false} stroke={C.grid} />
               <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12 }} />
               <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(v) => [`${v}%`, '진도율']} cursor={{ fill: 'rgba(15,92,85,0.06)' }} />
+              <Tooltip {...TOOLTIP_PROPS} position={{ x: 0 }} formatter={(v) => [`${v}%`, '진도율']} cursor={{ fill: 'rgba(15,92,85,0.06)' }} />
               <Bar dataKey="rate" fill={C.primary} radius={[0, 4, 4, 0]} isAnimationActive={false}>
                 <LabelList dataKey="rate" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 12, fill: C.ink }} />
               </Bar>
@@ -115,7 +116,7 @@ function Charts({ d }) {
                 <CartesianGrid horizontal={false} stroke={C.grid} />
                 <XAxis type="number" tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12 }} />
                 <YAxis type="category" dataKey="label" width={110} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v, _n, p) => [`${v}% (${p.payload.count}건)`, p.payload.subjectName]} />
+                <Tooltip {...TOOLTIP_PROPS} position={{ x: 0 }} formatter={(v, _n, p) => [`${v}% (${p.payload.count}건)`, p.payload.subjectName]} />
                 <Bar dataKey="score" fill={C.accent} radius={[0, 4, 4, 0]} isAnimationActive={false}>
                   <LabelList dataKey="score" position="right" formatter={(v) => `${v}%`} style={{ fontSize: 12, fill: C.ink }} />
                 </Bar>
@@ -134,7 +135,7 @@ function Charts({ d }) {
               <CartesianGrid stroke={C.grid} />
               <XAxis dataKey="label" tick={{ fontSize: 12 }} />
               <YAxis tickFormatter={(v) => `${v}h`} tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(v, n) => [`${v}시간`, n]} />
+              <Tooltip {...TOOLTIP_PROPS} formatter={(v, n) => [`${v}시간`, n]} />
               <Legend />
               <Line type="monotone" dataKey="plannedHours" name="계획" stroke={C.soft} strokeDasharray="5 4" strokeWidth={2} dot isAnimationActive={false} />
               <Line type="monotone" dataKey="actualHours" name="실제" stroke={C.primary} strokeWidth={2.5} dot isAnimationActive={false}>
@@ -151,7 +152,7 @@ function Charts({ d }) {
             <CartesianGrid vertical={false} stroke={C.grid} />
             <XAxis dataKey="label" tick={{ fontSize: 12 }} />
             <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12 }} />
-            <Tooltip formatter={(v, _n, p) => [p.payload.rate == null ? '배정 없음' : `${v}% (${p.payload.done}/${p.payload.scheduled})`, '달성률']} />
+            <Tooltip {...TOOLTIP_PROPS} formatter={(v, _n, p) => [p.payload.rate == null ? '배정 없음' : `${v}% (${p.payload.done}/${p.payload.scheduled})`, '달성률']} />
             <Bar dataKey="rateVal" fill={C.primary} radius={[4, 4, 0, 0]} isAnimationActive={false}>
               <LabelList dataKey="rate" position="top" formatter={(v) => (v == null ? '-' : `${v}%`)} style={{ fontSize: 12, fill: C.ink }} />
             </Bar>
