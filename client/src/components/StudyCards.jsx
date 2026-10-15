@@ -23,20 +23,20 @@ export function DdayHero({ exam, today, extra }) {
 }
 
 // 벤치마킹 : 오늘 계획대로 학습 / 자료 탐색으로 바로 시작
-export function StartChoice({ onPlan, planLabel = '오늘 계획대로 학습' }) {
+export function StartChoice({ onPlan, planLabel = '오늘 계획대로 학습', planDescription = '배정된 과제와 추천 자료로 바로 시작' }) {
   return (
     <section className="start-choice" aria-label="학습 시작 방법">
       <button type="button" className="choice choice-primary" onClick={onPlan}>
         <Icon name="play" size={22} />
         <span>
           <strong>{planLabel}</strong>
-          <small>배정된 과제와 추천 자료로 바로 시작</small>
+          <small>{planDescription}</small>
         </span>
       </button>
       <Link className="choice" to="/materials">
         <Icon name="search" size={22} />
         <span>
-          <strong>자료 찾아보기</strong>
+          <strong>원하는 자료 찾아 학습</strong>
           <small>과목·유형·단계별 공개 자료 탐색</small>
         </span>
       </Link>

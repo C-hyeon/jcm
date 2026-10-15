@@ -19,7 +19,12 @@ export default function Home() {
 
 function useScrollTo() {
   const ref = useRef(null);
-  return [ref, () => ref.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })];
+  return [ref, () => {
+    const target = ref.current;
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }];
 }
 
 function MemberHome() {
@@ -50,11 +55,8 @@ function MemberHome() {
         <section className="hero">
           <h1>시험일만 알려 주세요.</h1>
           <p>남은 기간과 하루 학습 시간에 맞춰 과목별 스케줄과 오늘 할 일을 만들어 드려요.</p>
-          <Link className="btn btn-primary btn-lg" to="/onboarding">
-            시험 정보 입력하기 (약 1분)
-          </Link>
         </section>
-        <StartChoice planLabel="학습 계획 만들기" onPlan={() => navigate('/onboarding')} />
+        <StartChoice planLabel="학습 계획 만들기" planDescription="시험일·학습 시간에 맞춰 계획 설정" onPlan={() => navigate('/onboarding')} />
       </div>
     );
   }
@@ -62,7 +64,8 @@ function MemberHome() {
     return (
       <div className="stack">
         <DdayHero exam={d.exam} today={d.today} />
-        <EmptyState title="아직 스케줄이 없어요" action={<Link className="btn btn-primary" to="/schedule">스케줄 만들기</Link>}>
+        <StartChoice planLabel="스케줄 만들기" planDescription="저장한 학습 조건으로 스케줄 생성" onPlan={() => navigate('/schedule')} />
+        <EmptyState title="아직 스케줄이 없어요">
           저장한 학습 조건으로 스케줄을 생성해 주세요.
         </EmptyState>
       </div>
@@ -120,6 +123,7 @@ function MemberHome() {
               {doneCount}/{d.tasks.length} 완료 · 총 {minutesLabel(totalMin)}
             </span>
           )}
+          <Link to="/progress" className="link-more">다른 단원 학습 기록</Link>
         </div>
         {d.redistribution && (d.redistribution.movedCount > 0 || d.redistribution.mergedReviewCount > 0) && (
           <Notice tone="info" icon="calendar">
@@ -137,9 +141,6 @@ function MemberHome() {
         ) : (
           <TaskList tasks={d.tasks} onChange={updateTask} />
         )}
-        <p className="muted small">
-          배정된 과제 외에 다른 단원을 공부했다면 <Link to="/progress">진도 화면에서 단원을 선택해 기록</Link>하세요. 이후 스케줄과 추천에 반영됩니다.
-        </p>
       </section>
 
       <div className="grid-2">
@@ -239,7 +240,11 @@ function GuestHome() {
         </section>
       )}
 
-      <StartChoice planLabel={guest?.plan ? '오늘 계획대로 학습' : '내 학습 계획 만들기'} onPlan={() => (guest?.plan ? scrollToToday() : navigate('/onboarding'))} />
+      <StartChoice
+        planLabel={guest?.plan ? '오늘 계획대로 학습' : '내 학습 계획 만들기'}
+        planDescription={guest?.plan ? undefined : '시험일·학습 시간에 맞춰 계획 설정'}
+        onPlan={() => (guest?.plan ? scrollToToday() : navigate('/onboarding'))}
+      />
 
       {guest?.plan && (
         <section ref={todayRef} className="section" aria-labelledby="g-today" tabIndex={-1}>
