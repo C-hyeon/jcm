@@ -131,7 +131,7 @@ export default function WrongNotes() {
               ))}
             </ol>
           ) : (
-            <p className="muted">오답을 기록하면 취약도를 계산해 보여 드려요. (최근 14일 기록 1.5배, 복습 완료 0.5배 가중)</p>
+            <p className="muted">최근 2주 동안의 오답은 더 중요하게 반영하고, 복습을 마친 오답은 덜 반영해 취약 유형을 알려드려요.</p>
           ))}
       </section>
 

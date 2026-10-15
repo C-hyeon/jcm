@@ -108,7 +108,7 @@ function Charts({ d }) {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="유형별 취약도" summary="오답 가중치 기준 비율(최근 14일 1.5배, 복습 완료 0.5배)">
+        <ChartCard title="유형별 취약도" summary="최근 2주 동안의 오답은 더 중요하게 반영하고, 복습을 마친 오답은 덜 반영해 취약 유형을 알려드려요.">
           {d.weakness.length ? (
             <ResponsiveContainer width="100%" height={Math.max(220, d.weakness.length * 34)}>
               <BarChart data={d.weakness} layout="vertical" margin={{ left: 8, right: 56 }}>
