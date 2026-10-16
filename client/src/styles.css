@@ -1543,8 +1543,16 @@ input[type='radio'] {
 .unit-hours {
   margin-left: auto;
 }
+.progress-page .unit-steps .seg-item {
+  min-height: 44px;
+}
 
 /* ───── 오답노트 ───── */
+.wrong-notes-page .seg-sm .seg-item,
+.wrong-notes-page .tag-picker .chip,
+.wrong-notes-page .note-actions .btn-sm {
+  min-height: 44px;
+}
 .top3 {
   list-style: none;
   padding: 0;
