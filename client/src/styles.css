@@ -1109,6 +1109,16 @@ input[type='radio'] {
   display: grid;
   gap: 16px;
 }
+.onboarding .onboarding-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.onboarding .seg-item,
+.onboarding .day {
+  min-height: 44px;
+}
 .stepper {
   list-style: none;
   padding: 0;

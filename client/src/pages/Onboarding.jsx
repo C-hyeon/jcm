@@ -1,10 +1,10 @@
 // UC-02 시험 정보 및 학습 조건 입력
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, apiWithConfirm } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../hooks/useApi';
-import { saveGuest } from '../lib/guest';
+import { loadGuest, saveGuest } from '../lib/guest';
 import { CONFIDENCE, DAYS, ddayLabel, diffDays, EXAM_TYPE, formatDate, STAGE, STAGE_DESC, todayKST, addDays } from '../lib/format';
 import { ErrorBox, Loading, Notice, PageHeader } from '../components/ui';
 
@@ -17,6 +17,12 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [saveStage, setSaveStage] = useState(null);
+  const pending = useRef(false);
+  const attempt = useRef(null);
+  const mounted = useRef(true);
+  const owner = useRef(user?.uid || null);
+  owner.current = user?.uid || null;
   const [form, setForm] = useState({
     examType: 'written',
     examId: '',
@@ -30,6 +36,11 @@ export default function Onboarding() {
   const exams = useApi(() => api('/api/exams'), []);
   const subjects = useApi(() => api(`/api/subjects?examType=${form.examType}`), [form.examType]);
   const existing = useApi(user ? () => api('/api/study-profile') : null, [user]);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
     const p = existing.data?.profile;
@@ -49,56 +60,140 @@ export default function Onboarding() {
   const examOptions = useMemo(() => (exams.data?.items || []).filter((e) => e.type === form.examType), [exams.data, form.examType]);
   const examDate = form.examId ? examOptions.find((e) => e.id === form.examId)?.examDate : form.customDate;
   const dday = examDate ? diffDays(today, examDate) : null;
-  const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const subjectItems = !subjects.loading && !subjects.error ? subjects.data?.items || [] : [];
+  const subjectError = subjects.error || (!subjects.loading && !subjectItems.length ? { message: '과목 정보가 없어요. 다시 불러와 주세요.' } : null);
+  const refreshOnly = saveStage === 'refresh' && !!attempt.current?.planCreated && attempt.current.owner === (user?.uid || null);
+  const fieldsLocked = saving || refreshOnly;
+  const submitDisabled = saving || (!refreshOnly && (!subjectItems.length || (form.examId && (exams.loading || !!exams.error))));
 
-  function validateStep() {
-    if (step === 0) {
+  function set(patch) {
+    if (pending.current || refreshOnly) return;
+    attempt.current = null;
+    setSaveStage(null);
+    setError(null);
+    setForm((f) => ({ ...f, ...patch }));
+  }
+
+  function validateStep(at = step) {
+    if (at === 0) {
+      if (!EXAM_TYPE[form.examType]) return '시험 구분을 선택해 주세요.';
+      if (form.examId && (exams.loading || exams.error)) return '시험 회차 정보를 불러온 뒤 다시 시도해 주세요.';
       if (!examDate) return '시험 회차를 선택하거나 시험일을 입력해 주세요.';
+      try {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(examDate) || addDays(examDate, 0) !== examDate) return '올바른 시험일을 입력해 주세요.';
+      } catch {
+        return '올바른 시험일을 입력해 주세요.';
+      }
       if (examDate <= today) return '시험일은 내일 이후 날짜여야 합니다.';
     }
-    if (step === 1 && !form.studyDays.length) return '학습 요일을 하루 이상 선택해 주세요.';
+    if (at === 1) {
+      const hours = Number(form.dailyHours);
+      if (!Number.isFinite(hours) || hours < 0.5 || hours > 12 || !Number.isInteger(hours * 2)) return '하루 학습 시간은 30분부터 12시간까지, 30분 단위로 선택해 주세요.';
+      if (!form.studyDays.length) return '학습 요일을 하루 이상 선택해 주세요.';
+      if (form.studyDays.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) return '학습 요일을 다시 선택해 주세요.';
+    }
+    if (at === 2 && !STAGE[form.stage]) return '현재 학습 단계를 선택해 주세요.';
+    if (at === 3) {
+      if (!subjectItems.length) return '과목 정보를 불러온 뒤 다시 시도해 주세요.';
+      for (const subject of subjectItems) {
+        const progress = Number(form.subjectProgress[subject.id] ?? 0);
+        const confidence = Number(form.subjectConfidence[subject.id] ?? 2);
+        if (!Number.isFinite(progress) || progress < 0 || progress > 100) return '과목별 진도를 0%부터 100% 사이로 선택해 주세요.';
+        if (![1, 2, 3].includes(confidence)) return '과목별 자신감을 다시 선택해 주세요.';
+      }
+    }
     return null;
   }
   function nextStep() {
+    if (pending.current || refreshOnly) return;
     const v = validateStep();
     if (v) return setError({ message: v });
     setError(null);
-    setStep((s) => s + 1);
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  }
+
+  function previousStep() {
+    if (pending.current || refreshOnly) return;
+    setError(null);
+    setStep((s) => Math.max(s - 1, 0));
   }
 
   async function submit() {
-    const v = validateStep();
-    if (v) return setError({ message: v });
+    if (pending.current || existing.loading || existing.error) return;
+    if (!refreshOnly) {
+      for (let i = 0; i < STEPS.length; i++) {
+        const message = validateStep(i);
+        if (message) {
+          setStep(i);
+          setError({ message });
+          return;
+        }
+      }
+    }
+    if (!attempt.current || attempt.current.owner !== (user?.uid || null)) {
+      attempt.current = {
+        owner: user?.uid || null,
+        profile: {
+          examType: form.examType,
+          examId: form.examId || null,
+          examDate,
+          dailyHours: Number(form.dailyHours),
+          studyDays: [...form.studyDays],
+          stage: form.stage,
+          subjectProgress: Object.fromEntries(subjectItems.map((s) => [s.id, Number(form.subjectProgress[s.id] ?? 0)])),
+          subjectConfidence: Object.fromEntries(subjectItems.map((s) => [s.id, Number(form.subjectConfidence[s.id] ?? 2)])),
+        },
+        profileSaved: false,
+        planCreated: false,
+        preview: null,
+      };
+    }
+    const current = attempt.current;
+    pending.current = true;
     setSaving(true);
     setError(null);
-    const subs = subjects.data?.items || [];
-    const profile = {
-      examType: form.examType,
-      examId: form.examId || null,
-      examDate,
-      dailyHours: Number(form.dailyHours),
-      studyDays: form.studyDays,
-      stage: form.stage,
-      subjectProgress: Object.fromEntries(subs.map((s) => [s.id, Number(form.subjectProgress[s.id] ?? 0)])),
-      subjectConfidence: Object.fromEntries(subs.map((s) => [s.id, Number(form.subjectConfidence[s.id] ?? 2)])),
-    };
     try {
+      // 응답으로 성공을 확인한 단계는 재시도할 때 다시 실행하지 않는다.
       if (user) {
-        await api('/api/study-profile', { method: 'PUT', body: profile });
-        await apiWithConfirm('/api/plans', { body: {}, confirmKey: 'confirmOverwrite' });
+        if (!current.profileSaved) {
+          setSaveStage('profile');
+          await api('/api/study-profile', { method: 'PUT', body: current.profile });
+          current.profileSaved = true;
+          if (!mounted.current || owner.current !== current.owner) return;
+        }
+        if (!current.planCreated) {
+          setSaveStage('plan');
+          await apiWithConfirm('/api/plans', { body: {}, confirmKey: 'confirmOverwrite' });
+          current.planCreated = true;
+          if (!mounted.current || owner.current !== current.owner) return;
+        }
+        setSaveStage('refresh');
         await refreshMe();
       } else {
-        const preview = await api('/api/plans/preview', { method: 'POST', body: profile });
-        saveGuest({ profile, plan: preview.plan, tasks: preview.tasks });
+        if (!current.preview) {
+          setSaveStage('preview');
+          current.preview = await api('/api/plans/preview', { method: 'POST', body: current.profile });
+          if (!mounted.current || owner.current !== current.owner) return;
+        }
+        setSaveStage('guest');
+        const data = { profile: current.profile, plan: current.preview.plan, tasks: current.preview.tasks };
+        saveGuest(data);
+        const stored = loadGuest();
+        if (!stored || JSON.stringify({ profile: stored.profile, plan: stored.plan, tasks: stored.tasks }) !== JSON.stringify(data)) {
+          throw new Error('미리보기를 브라우저에 보관하지 못했어요. 브라우저의 저장 공간 설정을 확인한 뒤 다시 시도해 주세요.');
+        }
       }
-      navigate('/schedule', { state: { created: true } });
+      if (mounted.current && owner.current === current.owner) navigate('/schedule', { state: { created: true } });
     } catch (e) {
-      setError(e);
-      setSaving(false);
+      if (mounted.current && owner.current === current.owner && !(e.status === 409 && e.code === 'PLAN_EXISTS')) setError(e);
+    } finally {
+      pending.current = false;
+      if (mounted.current) setSaving(false);
     }
   }
 
   if (existing.loading) return <Loading />;
+  if (existing.error) return <ErrorBox error={{ ...existing.error, message: '기존 학습 조건을 불러오지 못했어요. 다시 시도해 주세요.' }} onRetry={existing.reload} />;
 
   return (
     <div className="onboarding">
@@ -113,9 +208,12 @@ export default function Onboarding() {
       </ol>
 
       <div className="card">
+        <fieldset className="onboarding-fields" disabled={fieldsLocked} aria-label="학습 조건 입력" aria-busy={saving}>
         {step === 0 && (
           <fieldset className="form">
             <legend className="h2">어떤 시험을 준비하나요?</legend>
+            {exams.loading && <Loading lines={1} label="시험 회차를 불러오는 중" />}
+            <ErrorBox error={exams.error} onRetry={exams.reload} />
             <div className="seg" role="radiogroup" aria-label="시험 구분">
               {['written', 'practical'].map((t) => (
                 <label key={t} className={`seg-item ${form.examType === t ? 'on' : ''}`}>
@@ -126,8 +224,9 @@ export default function Onboarding() {
             </div>
             <label className="field">
               <span>시험 회차</span>
-              <select value={form.examId} onChange={(e) => set({ examId: e.target.value, customDate: '' })}>
+              <select value={form.examId} disabled={exams.loading || !!exams.error} onChange={(e) => set({ examId: e.target.value, customDate: '' })}>
                 <option value="">목록에 없음 (시험일 직접 입력)</option>
+                {form.examId && !examOptions.some((e) => e.id === form.examId) && <option value={form.examId} disabled>이전 시험 회차 (다시 선택해 주세요)</option>}
                 {examOptions.map((e) => (
                   <option key={e.id} value={e.id}>
                     {e.year}년 {e.round}회 {EXAM_TYPE[e.type]} — {formatDate(e.examDate)}
@@ -202,8 +301,9 @@ export default function Onboarding() {
             <h2>과목별로 얼마나 해 두었나요?</h2>
             <p className="muted small">진도는 이미 공부한 비율, 자신감은 체감 이해도예요. 자신감이 낮은 과목에 시간을 더 배분합니다.</p>
             {subjects.loading && <Loading />}
+            <ErrorBox error={subjectError} onRetry={subjects.reload} />
             <ul className="subject-inputs">
-              {(subjects.data?.items || []).map((s) => {
+              {subjectItems.map((s) => {
                 const p = form.subjectProgress[s.id] ?? 0;
                 const c = form.subjectConfidence[s.id] ?? 2;
                 return (
@@ -241,18 +341,22 @@ export default function Onboarding() {
           </div>
         )}
 
-        <ErrorBox error={error} />
+        </fieldset>
+        {saving && <p className="muted small" role="status">{saveStage === 'profile' ? '학습 조건 저장 중…' : saveStage === 'refresh' ? '사용자 정보 확인 중…' : saveStage === 'guest' ? '미리보기 보관 중…' : '스케줄 만드는 중…'}</p>}
+        {!saving && saveStage === 'plan' && attempt.current?.profileSaved && <Notice tone="warn">학습 조건은 저장됐어요. 스케줄 생성은 아직 완료 여부를 확인하지 못했어요. 다시 시도하면 기존 일정 변경 확인이 나올 수 있어요.</Notice>}
+        {!saving && refreshOnly && <Notice tone="info">스케줄은 만들어졌어요. 사용자 정보를 다시 불러오면 스케줄로 이동해요.</Notice>}
+        <ErrorBox error={error} onRetry={!saving && saveStage ? submit : undefined} />
         <div className="row-between">
-          <button type="button" className="btn btn-ghost" onClick={() => setStep((s) => s - 1)} disabled={step === 0 || saving}>
+          <button type="button" className="btn btn-ghost" onClick={previousStep} disabled={step === 0 || fieldsLocked}>
             이전
           </button>
           {step < STEPS.length - 1 ? (
-            <button type="button" className="btn btn-primary" onClick={nextStep}>
+            <button key={`next-${step}`} type="button" className="btn btn-primary" onClick={nextStep} disabled={fieldsLocked}>
               다음
             </button>
           ) : (
-            <button type="button" className="btn btn-primary" onClick={submit} disabled={saving}>
-              {saving ? '스케줄 만드는 중…' : user ? '저장하고 스케줄 만들기' : '스케줄 미리보기'}
+            <button key="submit" type="button" className="btn btn-primary" onClick={submit} disabled={submitDisabled}>
+              {saving ? '스케줄 만드는 중…' : refreshOnly ? '사용자 정보 다시 불러오기' : saveStage === 'plan' && attempt.current?.profileSaved ? '스케줄 생성 다시 시도' : user ? '저장하고 스케줄 만들기' : '스케줄 미리보기'}
             </button>
           )}
         </div>
