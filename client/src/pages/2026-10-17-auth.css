@@ -1,0 +1,53 @@
+.auth-page .auth-fields {
+  display: grid;
+  gap: 14px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.auth-page .auth-field-label {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.auth-page .auth-password {
+  position: relative;
+  min-width: 0;
+}
+.auth-page .auth-password input:not([type='checkbox']):not([type='radio']):not([type='range']) {
+  min-height: 48px;
+  padding-right: 56px;
+}
+.auth-page .auth-password-toggle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.auth-page .auth-password-toggle:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.auth-page .auth-password-toggle:disabled {
+  cursor: wait;
+}
+.auth-page a[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: wait;
+}
+.auth-page .check-row input {
+  flex-shrink: 0;
+}
+.auth-page .field-error,
+.auth-page [role='status'] {
+  overflow-wrap: anywhere;
+}
