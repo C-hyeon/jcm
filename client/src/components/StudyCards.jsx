@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon';
-import { Dialog, ExternalLink, ProgressBar } from './ui';
+import { Dialog, ErrorBox, ExternalLink, ProgressBar } from './ui';
 import { api } from '../api/client';
 import { ddayLabel, EXAM_TYPE, formatDate, MATERIAL_TYPE, minutesLabel, UNDERSTANDING } from '../lib/format';
 
@@ -264,7 +264,7 @@ export function SubjectBars({ subjects, compact = false }) {
 }
 
 // 벤치마킹 : 추천 주제·추천 이유·연결된 자료 출처를 한 카드에
-export function RecommendationCards({ rec, onFeedback }) {
+export function RecommendationCards({ rec, onFeedback, feedbackBusy = false, feedbackError = null, onRetryFeedback }) {
   if (!rec) return null;
   return (
     <div className="rec-wrap">
@@ -289,16 +289,18 @@ export function RecommendationCards({ rec, onFeedback }) {
         ))}
       </ol>
       {onFeedback && (
-        <div className="rec-feedback" role="group" aria-label="추천 피드백">
+        <div className="rec-feedback" role="group" aria-label="추천 피드백" aria-busy={feedbackBusy || undefined}>
           <span className="muted">이 추천이 도움이 됐나요?</span>
-          <button type="button" className={`btn btn-sm ${rec.feedback === 'helpful' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onFeedback('helpful')} aria-pressed={rec.feedback === 'helpful'}>
+          <button type="button" className={`btn btn-sm ${rec.feedback === 'helpful' ? 'btn-primary' : 'btn-ghost'}`} disabled={feedbackBusy} onClick={() => onFeedback('helpful')} aria-pressed={rec.feedback === 'helpful'}>
             도움 됨
           </button>
-          <button type="button" className={`btn btn-sm ${rec.feedback === 'not_helpful' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onFeedback('not_helpful')} aria-pressed={rec.feedback === 'not_helpful'}>
+          <button type="button" className={`btn btn-sm ${rec.feedback === 'not_helpful' ? 'btn-primary' : 'btn-ghost'}`} disabled={feedbackBusy} onClick={() => onFeedback('not_helpful')} aria-pressed={rec.feedback === 'not_helpful'}>
             도움 안 됨
           </button>
         </div>
       )}
+      {onFeedback && feedbackBusy && <p className="muted small" role="status">피드백 저장 중이에요.</p>}
+      {onFeedback && <ErrorBox error={feedbackError} onRetry={feedbackBusy ? undefined : onRetryFeedback} />}
     </div>
   );
 }
