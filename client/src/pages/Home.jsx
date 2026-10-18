@@ -36,6 +36,7 @@ function MemberHome() {
   const progress = useApi(ready ? () => api('/api/progress') : null, [ready]);
   const weakness = useApi(ready ? () => api('/api/weakness') : null, [ready]);
   const recs = useApi(ready ? () => api('/api/recommendations?limit=1') : null, [ready]);
+  const recLoading = recs.loading || (!recs.data && !recs.error);
   const lastProgress = useRef(null);
   const lastWeakness = useRef(null);
   useEffect(() => {
@@ -44,6 +45,14 @@ function MemberHome() {
   }, [progress.data, weakness.data]);
   const [recBusy, setRecBusy] = useState(false);
   const [recErr, setRecErr] = useState(null);
+  const [feedbackStates, setFeedbackStates] = useState({});
+  const recPending = useRef(false);
+  const feedbackPending = useRef(new Set());
+  const recMounted = useRef(true);
+  useEffect(() => {
+    recMounted.current = true;
+    return () => { recMounted.current = false; };
+  }, []);
 
   if (today.loading) return <Loading lines={5} />;
   if (today.error) return <ErrorBox error={today.error} onRetry={today.reload} />;
@@ -81,25 +90,40 @@ function MemberHome() {
   };
   const progressData = progress.data || lastProgress.current;
   const weaknessData = weakness.data || lastWeakness.current;
-  const latestRec = recs.data?.items?.[0];
+  const latestRec = recLoading || recs.error ? null : recs.data?.items?.[0];
+  const feedbackState = latestRec ? feedbackStates[latestRec.id] : null;
   const doneCount = d.tasks.filter((t) => t.done).length;
   const totalMin = d.tasks.reduce((a, t) => a + t.minutes, 0);
 
   async function requestRec() {
+    if (recPending.current || recLoading || recs.error || !recMounted.current) return;
+    recPending.current = true;
     setRecBusy(true);
     setRecErr(null);
     try {
       const rec = await api('/api/recommendations', { method: 'POST' });
-      recs.setData({ items: [rec] });
+      if (recMounted.current) recs.setData((d) => ({ ...d, items: [rec] }));
     } catch (e) {
-      setRecErr(e);
+      if (recMounted.current) setRecErr(e);
     } finally {
-      setRecBusy(false);
+      recPending.current = false;
+      if (recMounted.current) setRecBusy(false);
     }
   }
-  async function feedback(value) {
-    await api(`/api/recommendations/${latestRec.id}`, { method: 'PATCH', body: { feedback: value } });
-    recs.setData({ items: [{ ...latestRec, feedback: value }] });
+  async function feedback(rec, value) {
+    if (!rec || feedbackPending.current.has(rec.id) || recLoading || recs.error || !recMounted.current) return;
+    feedbackPending.current.add(rec.id);
+    setFeedbackStates((s) => ({ ...s, [rec.id]: { busy: true, error: null, value } }));
+    try {
+      await api(`/api/recommendations/${rec.id}`, { method: 'PATCH', body: { feedback: value } });
+      if (!recMounted.current) return;
+      recs.setData((d) => d && ({ ...d, items: d.items.map((x) => x.id === rec.id ? { ...x, feedback: value } : x) }));
+    } catch (error) {
+      if (recMounted.current) setFeedbackStates((s) => ({ ...s, [rec.id]: { busy: true, error, value } }));
+    } finally {
+      feedbackPending.current.delete(rec.id);
+      if (recMounted.current) setFeedbackStates((s) => ({ ...s, [rec.id]: { ...s[rec.id], busy: false } }));
+    }
   }
 
   return (
@@ -200,16 +224,23 @@ function MemberHome() {
       <section className="card" aria-labelledby="rec-h">
         <div className="section-head">
           <h2 id="rec-h">다음 추천</h2>
-          <button type="button" className="btn btn-sm btn-primary" onClick={requestRec} disabled={recBusy}>
+          <button type="button" className="btn btn-sm btn-primary" onClick={requestRec} disabled={recBusy || recLoading || !!recs.error} aria-busy={recBusy}>
             <Icon name="spark" size={16} /> {recBusy ? '추천 생성 중… (최대 20초)' : latestRec ? '새로 추천 받기' : '추천 받기'}
           </button>
         </div>
-        <ErrorBox error={recErr} />
-        {recs.loading && <Loading />}
+        <ErrorBox error={recErr} onRetry={recBusy || recLoading || recs.error ? undefined : requestRec} />
+        {recLoading && <Loading />}
+        <ErrorBox error={recs.error} onRetry={recLoading ? undefined : recs.reload} />
         {latestRec ? (
-          <RecommendationCards rec={latestRec} onFeedback={feedback} />
+          <RecommendationCards
+            rec={latestRec}
+            onFeedback={(value) => feedback(latestRec, value)}
+            feedbackBusy={!!feedbackState?.busy}
+            feedbackError={feedbackState?.error}
+            onRetryFeedback={feedbackState?.error ? () => feedback(latestRec, feedbackState.value) : undefined}
+          />
         ) : (
-          !recs.loading && <p className="muted">남은 기간, 진도, 취약 유형을 바탕으로 다음 학습 주제와 자료를 추천해 드려요.</p>
+          !recLoading && !recs.error && !recBusy && <p className="muted">남은 기간, 진도, 취약 유형을 바탕으로 다음 학습 주제와 자료를 추천해 드려요.</p>
         )}
       </section>
     </div>

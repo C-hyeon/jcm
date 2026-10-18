@@ -188,7 +188,7 @@ test('401 still directs to login instead of retrying writes',()=>{
  const html=render({step:3,saveStage:'profile',error:fail(401)});assert.match(html,/다시 로그인/);assert.doesNotMatch(html,/>다시 시도</);
 });
 test('onboarding CSS alone changes and previous styles are byte-preserved',()=>{
- const css=fs.readFileSync(path.join(root,'client/src/styles.css'),'utf8');
+ const css=require('../2026-10-19-header-qa/2026-10-19-header-css.cjs').stripHeaderCSS(fs.readFileSync(path.join(root,'client/src/styles.css'),'utf8'));
  const rule='.onboarding .onboarding-fields {\n  border: 0;\n  padding: 0;\n  margin: 0;\n  min-width: 0;\n}\n.onboarding .seg-item,\n.onboarding .day {\n  min-height: 44px;\n}\n';
  assert.equal(css.split(rule).length,2);
  // CSS baseline from b0a8418; no local QA snapshot or account data is required.

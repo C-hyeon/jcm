@@ -166,6 +166,31 @@ a:hover {
   background: var(--surface);
   border: 1px solid var(--line);
 }
+/* Header-only compact identity. */
+.topbar {
+  min-width: 0;
+}
+.brand {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.brand-mark {
+  flex-shrink: 0;
+}
+.topbar-right {
+  min-width: 0;
+}
+.user-chip {
+  min-width: 0;
+  max-width: 100%;
+}
+.user-chip > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* End header-only compact identity. */
 .sidenav {
   display: none;
 }

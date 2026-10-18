@@ -229,7 +229,7 @@ test('all new style selectors are scoped to auth and the shared stylesheet is un
   css.walkRules(rule => rule.selectors.forEach(selector => assert.ok(selector.startsWith('.auth-page '), selector)));
   // Baseline from 0859724; no local QA snapshot is required.
   const stylesHash = 'ab380b4380eecab26194bbe2b6bcdef4053d85d2dd49c54d4aa905d0d17caec9';
-  assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'client/src/styles.css'))).digest('hex'), stylesHash);
+  assert.equal(crypto.createHash('sha256').update(require('../2026-10-19-header-qa/2026-10-19-header-css.cjs').stripHeaderCSS(fs.readFileSync(path.join(root, 'client/src/styles.css'), 'utf8'))).digest('hex'), stylesHash);
 });
 test('existing icons are byte-preserved and only eye icons are added', () => {
   const text = fs.readFileSync(path.join(root, 'client/src/components/Icon.jsx'), 'utf8');
