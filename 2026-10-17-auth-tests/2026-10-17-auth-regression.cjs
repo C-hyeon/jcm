@@ -60,6 +60,11 @@ function harness(page = 'Login', options = {}) {
     scope['set' + name[0].toUpperCase() + name.slice(1)] = v => { state[name] = typeof v === 'function' ? v(state[name]) : v; };
   }
   scope.onError = scope.setError;
+  scope.fields = {
+    reject: (_field, message) => scope.setError(message),
+    clear: () => scope.setError(''),
+    setFormError: scope.setError,
+  };
   const funcs = node(page).body.body.filter(n => n.type === 'FunctionDeclaration').map(n => source.slice(n.start, n.end)).join('\n');
   let googleClick;
   function walk(n) {
@@ -148,6 +153,7 @@ test('reset failure preserves email and retries only the existing SDK operation'
 
 function render(page, overrides = {}, query = 'next=' + encodeURIComponent('/materials?q=SQL&bookmarked=1#topics')) {
   const cache = new Map(), keys = { Login: ['email', 'password', 'error', 'fails', 'busy'], Signup: ['form', 'error', 'busy'], ResetPassword: ['email', 'sent', 'error', 'busy'] }[page];
+  keys.push('field');
   let index = 0;
   function load(file) {
     if (cache.has(file)) return cache.get(file).exports;

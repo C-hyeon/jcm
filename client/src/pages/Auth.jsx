@@ -1,5 +1,5 @@
 // UC-01 로그인 / 회원가입 / 비밀번호 재설정
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
@@ -60,6 +60,30 @@ function useAuthAction() {
   return { busy, pending, begin, end };
 }
 
+function useAuthFields(error, setError) {
+  const [field, setField] = useState('');
+  const formRef = useRef(null);
+  const errorId = useId();
+  const focusField = (name) => formRef.current?.elements.namedItem(name)?.focus();
+  useEffect(() => {
+    if (error && field) focusField(field);
+  }, [error, field]);
+  function reject(name, message) {
+    if (field === name && error === message) focusField(name);
+    setField(name);
+    setError(message);
+  }
+  function setFormError(message) {
+    setField('');
+    setError(message);
+  }
+  function inputProps(name) {
+    const invalid = !!error && field === name;
+    return { name, 'aria-invalid': invalid || undefined, 'aria-describedby': invalid ? errorId : undefined };
+  }
+  return { formRef, errorId, field, reject, setFormError, clear: () => setFormError(''), inputProps };
+}
+
 function AuthLink({ action, ...props }) {
   return (
     <Link
@@ -88,7 +112,7 @@ function AuthShell({ title, children }) {
   );
 }
 
-function PasswordField({ label, toggleLabel = label, autoComplete, value, onChange }) {
+function PasswordField({ label, toggleLabel = label, autoComplete, value, onChange, inputProps = {} }) {
   const id = useId();
   const [visible, setVisible] = useState(false);
   const toggleName = `${toggleLabel} ${visible ? '숨기기' : '보기'}`;
@@ -96,7 +120,7 @@ function PasswordField({ label, toggleLabel = label, autoComplete, value, onChan
     <div className="field">
       <label className="auth-field-label" htmlFor={id}>{label}</label>
       <div className="auth-password">
-        <input id={id} type={visible ? 'text' : 'password'} autoComplete={autoComplete} required value={value} onChange={onChange} />
+        <input {...inputProps} id={id} type={visible ? 'text' : 'password'} autoComplete={autoComplete} required value={value} onChange={onChange} />
         <button type="button" className="auth-password-toggle" aria-label={toggleName} aria-pressed={visible} aria-controls={id} title={toggleName} onClick={() => setVisible((v) => !v)}>
           <Icon name={visible ? 'eyeOff' : 'eye'} />
         </button>
@@ -141,21 +165,23 @@ export function Login() {
   const [error, setError] = useState('');
   const [fails, setFails] = useState(0);
   const action = useAuthAction();
+  const fields = useAuthFields(error, setError);
   if (user) return <Navigate to={next} replace />;
 
   async function submit(e) {
     e.preventDefault();
     if (action.pending.current) return;
-    const validation = emailError(email) || (!password ? '비밀번호를 입력해 주세요.' : '');
-    if (validation) return setError(validation);
+    const emailValidation = emailError(email);
+    const validation = emailValidation || (!password ? '비밀번호를 입력해 주세요.' : '');
+    if (validation) return fields.reject(emailValidation ? 'email' : 'password', validation);
     if (!action.begin('email')) return;
-    setError('');
+    fields.clear();
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
       navigate(next, { replace: true });
     } catch (err) {
       setFails((f) => f + 1);
-      setError(msg(err));
+      fields.setFormError(msg(err));
     } finally {
       action.end();
     }
@@ -163,16 +189,16 @@ export function Login() {
 
   return (
     <AuthShell title="로그인">
-      <form onSubmit={submit} className="form" noValidate aria-busy={!!action.busy}>
+      <form ref={fields.formRef} onSubmit={submit} className="form" noValidate aria-busy={!!action.busy} aria-describedby={error && !fields.field ? fields.errorId : undefined}>
         <fieldset className="auth-fields" disabled={!!action.busy} aria-label="로그인 정보">
           <label className="field">
             <span>이메일</span>
-            <input type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} />
+            <input {...fields.inputProps('email')} type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={email} onChange={(e) => { setEmail(e.target.value); fields.clear(); }} />
           </label>
-          <PasswordField label="비밀번호" autoComplete="current-password" value={password} onChange={(e) => { setPassword(e.target.value); setError(''); }} />
+          <PasswordField inputProps={fields.inputProps('password')} label="비밀번호" autoComplete="current-password" value={password} onChange={(e) => { setPassword(e.target.value); fields.clear(); }} />
         </fieldset>
         {error && (
-          <p className="field-error" role="alert">
+          <p id={fields.errorId} className="field-error" role="alert">
             {error}
           </p>
         )}
@@ -188,7 +214,7 @@ export function Login() {
       <div className="divider">
         <span>또는</span>
       </div>
-      <GoogleButton next={next} onError={setError} action={action} />
+      <GoogleButton next={next} onError={fields.setFormError} action={action} />
       <p className="auth-links">
         <AuthLink action={action} to={`/reset-password?next=${encodeURIComponent(next)}`}>비밀번호 재설정</AuthLink> · <AuthLink action={action} to={`/signup?next=${encodeURIComponent(next)}`}>회원가입</AuthLink>
       </p>
@@ -204,31 +230,32 @@ export function Signup() {
   const [form, setForm] = useState({ email: '', password: '', password2: '', nickname: '', consent: false });
   const [error, setError] = useState('');
   const action = useAuthAction();
+  const fields = useAuthFields(error, setError);
   const busy = !!action.busy;
   if (user && !busy) return <Navigate to={next} replace />;
   const set = (k) => (e) => {
     if (action.pending.current) return;
     setForm((f) => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
-    setError('');
+    fields.clear();
   };
 
   function check() {
     const validation = emailError(form.email);
-    if (validation) return validation;
-    if (form.nickname.trim().length < 2 || form.nickname.trim().length > 20) return '닉네임은 2~20자로 입력해 주세요.';
-    if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) return '비밀번호는 8자 이상, 영문과 숫자를 섞어 주세요.';
-    if (form.password !== form.password2) return '비밀번호 확인이 일치하지 않습니다.';
-    if (!form.consent) return '개인정보 수집·이용에 동의해야 가입할 수 있어요.';
-    return '';
+    if (validation) return { field: 'email', message: validation };
+    if (form.nickname.trim().length < 2 || form.nickname.trim().length > 20) return { field: 'nickname', message: '닉네임은 2~20자로 입력해 주세요.' };
+    if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) return { field: 'password', message: '비밀번호는 8자 이상, 영문과 숫자를 섞어 주세요.' };
+    if (form.password !== form.password2) return { field: 'password2', message: '비밀번호 확인이 일치하지 않습니다.' };
+    if (!form.consent) return { field: 'consent', message: '개인정보 수집·이용에 동의해야 가입할 수 있어요.' };
+    return null;
   }
 
   async function submit(e) {
     e.preventDefault();
     if (action.pending.current) return;
     const v = check();
-    if (v) return setError(v);
+    if (v) return fields.reject(v.field, v.message);
     if (!action.begin('email')) return;
-    setError('');
+    fields.clear();
     try {
       const cred = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password);
       await updateProfile(cred.user, { displayName: form.nickname.trim() });
@@ -236,36 +263,36 @@ export function Signup() {
       await refreshMe();
       navigate(next, { replace: true });
     } catch (err) {
-      setError(err.code ? msg(err) : err.message);
+      fields.setFormError(err.code ? msg(err) : err.message);
       action.end();
     }
   }
 
   return (
     <AuthShell title="회원가입">
-      <form onSubmit={submit} className="form" noValidate aria-busy={busy}>
+      <form ref={fields.formRef} onSubmit={submit} className="form" noValidate aria-busy={busy} aria-describedby={error && !fields.field ? fields.errorId : undefined}>
         <fieldset className="auth-fields" disabled={busy} aria-label="회원가입 정보">
         <label className="field">
           <span>이메일</span>
-          <input type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={form.email} onChange={set('email')} />
+          <input {...fields.inputProps('email')} type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={form.email} onChange={set('email')} />
         </label>
         <label className="field">
           <span>닉네임 (2~20자)</span>
-          <input autoComplete="nickname" required value={form.nickname} onChange={set('nickname')} maxLength={20} />
+          <input {...fields.inputProps('nickname')} autoComplete="nickname" required value={form.nickname} onChange={set('nickname')} maxLength={20} />
         </label>
-        <PasswordField label="비밀번호 (8자 이상, 영문+숫자)" toggleLabel="비밀번호" autoComplete="new-password" value={form.password} onChange={set('password')} />
-        <PasswordField label="비밀번호 확인" autoComplete="new-password" value={form.password2} onChange={set('password2')} />
+        <PasswordField inputProps={fields.inputProps('password')} label="비밀번호 (8자 이상, 영문+숫자)" toggleLabel="비밀번호" autoComplete="new-password" value={form.password} onChange={set('password')} />
+        <PasswordField inputProps={fields.inputProps('password2')} label="비밀번호 확인" autoComplete="new-password" value={form.password2} onChange={set('password2')} />
         <details className="privacy-box">
           <summary>개인정보 수집·이용 안내 보기</summary>
           <PrivacyNotice />
         </details>
         <label className="check-row">
-          <input type="checkbox" checked={form.consent} onChange={set('consent')} />
+          <input {...fields.inputProps('consent')} type="checkbox" checked={form.consent} onChange={set('consent')} />
           <span>개인정보 수집·이용에 동의합니다 (필수)</span>
         </label>
         </fieldset>
         {error && (
-          <p className="field-error" role="alert">
+          <p id={fields.errorId} className="field-error" role="alert">
             {error}
           </p>
         )}
@@ -276,7 +303,7 @@ export function Signup() {
       <div className="divider">
         <span>또는</span>
       </div>
-      <GoogleButton next={next} onError={setError} action={action} />
+      <GoogleButton next={next} onError={fields.setFormError} action={action} />
       <p className="auth-links">
         이미 계정이 있나요? <AuthLink action={action} to={`/login?next=${encodeURIComponent(next)}`}>로그인</AuthLink>
       </p>
@@ -292,18 +319,19 @@ export function ResetPassword() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const action = useAuthAction();
+  const fields = useAuthFields(error, setError);
   async function submit(e) {
     e.preventDefault();
     if (action.pending.current) return;
     const validation = emailError(email);
-    if (validation) return setError(validation);
+    if (validation) return fields.reject('email', validation);
     if (!action.begin('reset')) return;
-    setError('');
+    fields.clear();
     try {
       await sendPasswordResetEmail(auth, email.trim());
       setSent(true);
     } catch (err) {
-      setError(msg(err));
+      fields.setFormError(msg(err));
     } finally {
       action.end();
     }
@@ -315,15 +343,15 @@ export function ResetPassword() {
           {email.trim()}로 재설정 링크를 보냈어요. 메일이 보이지 않으면 스팸함을 확인해 주세요. <Link to={loginPath}>로그인으로 돌아가기</Link>
         </p>
       ) : (
-        <form onSubmit={submit} className="form" noValidate aria-busy={!!action.busy}>
+        <form ref={fields.formRef} onSubmit={submit} className="form" noValidate aria-busy={!!action.busy} aria-describedby={error && !fields.field ? fields.errorId : undefined}>
           <fieldset className="auth-fields" disabled={!!action.busy} aria-label="비밀번호 재설정 정보">
             <label className="field">
               <span>가입한 이메일</span>
-              <input type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={email} onChange={(e) => { setEmail(e.target.value); setError(''); }} />
+              <input {...fields.inputProps('email')} type="email" inputMode="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={email} onChange={(e) => { setEmail(e.target.value); fields.clear(); }} />
             </label>
           </fieldset>
           {error && (
-            <p className="field-error" role="alert">
+            <p id={fields.errorId} className="field-error" role="alert">
               {error}
             </p>
           )}

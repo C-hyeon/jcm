@@ -35,10 +35,23 @@ test('CSS without a header block is returned unchanged', () => {
   const original = stripHeaderCSS(css);
   assert.equal(stripHeaderCSS(original), original);
 });
-test('shared layout behavior, full nickname and account links are unchanged', () => {
+test('layout outside the approved consent gate, full nickname and account links is unchanged', () => {
   const cp = require('node:child_process');
   const before = cp.execFileSync('git', ['show', '2f11e50:client/src/components/Layout.jsx'], { cwd: root, encoding: 'utf8' });
-  assert.equal(fs.readFileSync(path.join(root, 'client/src/components/Layout.jsx'), 'utf8'), before);
+  const current = fs.readFileSync(path.join(root, 'client/src/components/Layout.jsx'), 'utf8');
+  const gate = text => req('@babel/parser').parse(text, { sourceType: 'module', plugins: ['jsx'] }).program.body.find(n => n.type === 'FunctionDeclaration' && n.id?.name === 'ConsentGate');
+  const oldGate = gate(before), newGate = gate(current);
+  assert.ok(oldGate && newGate);
+  let restored = current.slice(0, newGate.start) + before.slice(oldGate.start, oldGate.end) + current.slice(newGate.end);
+  for (const [changed, original] of [
+    ["import { useEffect, useRef, useState } from 'react';", "import { useEffect, useState } from 'react';"],
+    ["import { Dialog, ErrorBox, Loading } from './ui';", "import { Dialog, Loading } from './ui';"],
+    ['<ConsentGate key={user.uid} />', '<ConsentGate />'],
+  ]) {
+    assert.equal(restored.split(changed).length, 2);
+    restored = restored.replace(changed, original);
+  }
+  assert.equal(restored, before);
 });
 
 const helper = "require('../2026-10-19-header-qa/2026-10-19-header-css.cjs').stripHeaderCSS";
@@ -58,8 +71,12 @@ const portableBaselines = {
     "JSON.parse(fs.readFileSync(path.join(__dirname,'2026-10-16-before.json'),'utf8'))",
   ],
 };
+const authHarnessAdditions = [
+  "  scope.fields = {\n    reject: (_field, message) => scope.setError(message),\n    clear: () => scope.setError(''),\n    setFormError: scope.setError,\n  };\n",
+  "  keys.push('field');\n",
+];
 for (const [file, changed, original, digest] of comparisons) {
-  test(`${file}: only approved CSS comparison and baseline access are changed`, () => {
+  test(`${file}: only approved CSS comparison, baseline access and auth harness are changed`, () => {
     const text = fs.readFileSync(path.join(root, file), 'utf8');
     assert.equal(text.split(changed).length, 2);
     let restored = text.replace(changed, original);
@@ -67,6 +84,12 @@ for (const [file, changed, original, digest] of comparisons) {
       const [portable, snapshot] = portableBaselines[file];
       assert.equal(text.split(portable).length, 2);
       restored = restored.replace(portable, snapshot);
+    }
+    if (file === '2026-10-17-auth-tests/2026-10-17-auth-regression.cjs') {
+      for (const addition of authHarnessAdditions) {
+        assert.equal(restored.split(addition).length, 2);
+        restored = restored.replace(addition, '');
+      }
     }
     if (file === '2026-10-16-wrong-notes-qa/2026-10-16-wrong-notes-regression.cjs') {
       assert.ok(text.endsWith('\n') && !text.endsWith('\n\n'));

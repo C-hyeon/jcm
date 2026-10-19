@@ -67,7 +67,7 @@ export function EmptyState({ title, children, action }) {
   );
 }
 
-export function Dialog({ open, onClose, title, children, wide = false }) {
+export function Dialog({ open, onClose, title, children, wide = false, dismissible = true }) {
   const ref = useRef(null);
   const titleId = useId();
   useEffect(() => {
@@ -77,12 +77,19 @@ export function Dialog({ open, onClose, title, children, wide = false }) {
     if (!open && d.open) d.close();
   }, [open]);
   return (
-    <dialog ref={ref} className={`dialog ${wide ? 'dialog-wide' : ''}`} aria-labelledby={titleId} onClose={onClose} onCancel={onClose}>
+    <dialog ref={ref} className={`dialog ${wide ? 'dialog-wide' : ''}`} aria-labelledby={titleId} onClose={onClose} onKeyDown={(e) => {
+      if (!dismissible && e.key === 'Escape') e.preventDefault();
+    }} onCancel={(e) => {
+      if (!dismissible) e.preventDefault();
+      else onClose?.(e);
+    }}>
       <div className="dialog-head">
         <h2 id={titleId}>{title}</h2>
-        <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
-          <Icon name="close" />
-        </button>
+        {dismissible && (
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="닫기">
+            <Icon name="close" />
+          </button>
+        )}
       </div>
       {open && children}
     </dialog>

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import Icon from './Icon';
-import { Dialog, Loading } from './ui';
+import { Dialog, ErrorBox, Loading } from './ui';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
 
@@ -92,7 +92,7 @@ export default function Layout() {
           <span>더보기</span>
         </NavLink>
       </nav>
-      {user && me && !me.consentAgreedAt && <ConsentGate />}
+      {user && me && !me.consentAgreedAt && <ConsentGate key={user.uid} />}
     </div>
   );
 }
@@ -100,21 +100,65 @@ export default function Layout() {
 // Google 로그인 등으로 가입한 경우 개인정보 수집·이용 동의
 function ConsentGate() {
   const { refreshMe, logout } = useAuth();
-  const [saving, setSaving] = useState(false);
+  const [phase, setPhase] = useState(null);
+  const [error, setError] = useState(null);
+  const [refreshOnly, setRefreshOnly] = useState(false);
+  const pending = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   async function agree() {
-    setSaving(true);
-    await api('/api/me', { method: 'PUT', body: { consent: true } });
-    await refreshMe();
+    if (pending.current || !mounted.current) return;
+    pending.current = true;
+    let saved = refreshOnly;
+    setPhase(saved ? 'refresh' : 'save');
+    setError(null);
+    try {
+      if (!saved) {
+        await api('/api/me', { method: 'PUT', body: { consent: true } });
+        saved = true;
+        if (!mounted.current) return;
+        setRefreshOnly(true);
+      }
+      if (!mounted.current) return;
+      setPhase('refresh');
+      await refreshMe();
+    } catch {
+      if (mounted.current) setError({ action: 'agree', message: saved
+        ? '동의는 저장됐지만 사용자 정보를 불러오지 못했어요. 다시 시도를 눌러 정보를 불러와 주세요.'
+        : '동의를 저장하지 못했어요. 연결 상태를 확인한 뒤 다시 시도해 주세요.' });
+    } finally {
+      pending.current = false;
+      if (mounted.current) setPhase(null);
+    }
+  }
+  async function leave() {
+    if (pending.current || !mounted.current) return;
+    pending.current = true;
+    setPhase('logout');
+    setError(null);
+    try {
+      await logout();
+    } catch {
+      if (mounted.current) setError({ action: 'logout', message: '로그아웃하지 못했어요. 연결 상태를 확인한 뒤 다시 시도해 주세요.' });
+    } finally {
+      pending.current = false;
+      if (mounted.current) setPhase(null);
+    }
   }
   return (
-    <Dialog open onClose={() => {}} title="개인정보 수집·이용 동의">
+    <Dialog open dismissible={false} onClose={() => {}} title="개인정보 수집·이용 동의">
       <PrivacyNotice />
-      <div className="row-end">
-        <button type="button" className="btn btn-ghost" onClick={logout}>
-          동의하지 않고 로그아웃
+      <ErrorBox error={error} onRetry={phase ? undefined : error?.action === 'logout' ? leave : agree} />
+      {phase && <p className="muted small" role="status">{phase === 'save' ? '동의를 저장하는 중이에요.' : phase === 'refresh' ? '사용자 정보를 확인하는 중이에요.' : '로그아웃하는 중이에요.'}</p>}
+      <div className="row-end" aria-busy={!!phase}>
+        <button type="button" className="btn btn-ghost" onClick={leave} disabled={!!phase}>
+          {phase === 'logout' ? '로그아웃 중…' : '동의하지 않고 로그아웃'}
         </button>
-        <button type="button" className="btn btn-primary" onClick={agree} disabled={saving}>
-          동의하고 시작
+        <button type="button" className="btn btn-primary" onClick={agree} disabled={!!phase}>
+          {phase === 'save' ? '동의 저장 중…' : phase === 'refresh' ? '정보 확인 중…' : refreshOnly ? '정보 다시 불러오기' : '동의하고 시작'}
         </button>
       </div>
     </Dialog>
