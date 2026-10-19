@@ -164,15 +164,15 @@ export function TaskCard({ task, onChange, onRequireLogin, readOnly = false }) {
           )}
         </div>
       )}
-      <StudyLogDialog open={logOpen} task={task} error={err} onClose={closeLog} onSave={saveLog} />
+      <StudyLogDialog open={logOpen} busy={busy} task={task} error={err} onClose={closeLog} onSave={saveLog} />
     </article>
   );
 }
 
 // 벤치마킹 : 완료 여부와 함께 이해도·복습 필요 여부 기록
-function StudyLogDialog({ open, task, error, onClose, onSave }) {
+function StudyLogDialog({ open, busy, task, error, onClose, onSave }) {
   return (
-    <Dialog open={open} onClose={onClose} title="학습 기록">
+    <Dialog open={open} dismissible={!busy} onClose={onClose} title="학습 기록">
       <StudyLogForm task={task} error={error} onClose={onClose} onSave={onSave} />
     </Dialog>
   );

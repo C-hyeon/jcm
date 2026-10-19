@@ -153,10 +153,14 @@ test('today action is safe before its target is mounted', () => {
   const hook = vm.runInNewContext(functionSource(homeSource, 'useScrollTo') + '\nuseScrollTo', { useRef: () => ({ current: null }) });
   assert.doesNotThrow(() => hook()[1]());
 });
-test('shared StudyCards functions except approved StartChoice and RecommendationCards changes are unchanged', () => {
+test('shared StudyCards functions preserve behavior outside approved choices, recommendations and log dismissibility', () => {
   const before = execFileSync('git', ['show', 'HEAD:client/src/components/StudyCards.jsx'], { cwd: root, encoding: 'utf8' });
+  const normalizeLogUI = (text) => text
+    .replace('<StudyLogDialog open={logOpen} busy={busy}', '<StudyLogDialog open={logOpen}')
+    .replace('function StudyLogDialog({ open, busy,', 'function StudyLogDialog({ open,')
+    .replace('<Dialog open={open} dismissible={!busy} onClose={onClose} title="학습 기록">', '<Dialog open={open} onClose={onClose} title="학습 기록">');
   for (const node of declarations(before).filter((item) => item.type === 'FunctionDeclaration' && !['StartChoice', 'RecommendationCards'].includes(item.id.name))) {
-    assert.equal(functionSource(cardsSource, node.id.name), functionSource(before, node.id.name), node.id.name);
+    assert.equal(normalizeLogUI(functionSource(cardsSource, node.id.name)), normalizeLogUI(functionSource(before, node.id.name)), node.id.name);
   }
 });
 test('existing Materials implementation is preserved', () => {
