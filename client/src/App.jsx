@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 import Layout, { MorePage, RequireAuth } from './components/Layout';
 import { Loading } from './components/ui';
+import PageErrorBoundary from './components/2026-10-30-PageErrorBoundary';
 import Home from './pages/Home';
 import { Login, ResetPassword, Signup } from './pages/Auth';
 import Onboarding from './pages/Onboarding';
@@ -18,7 +19,9 @@ const Admin = lazy(() => import('./pages/Admin'));
 
 const guard = (el, admin = false) => (
   <RequireAuth admin={admin}>
-    <Suspense fallback={<Loading />}>{el}</Suspense>
+    <PageErrorBoundary>
+      <Suspense fallback={<Loading />}>{el}</Suspense>
+    </PageErrorBoundary>
   </RequireAuth>
 );
 
