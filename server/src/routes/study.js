@@ -5,9 +5,11 @@ const { db, FieldValue } = require('../config/firebase');
 const { ah, HttpError } = require('../lib/httpError');
 const { validate } = require('../middleware/common');
 const { userRef, userCol } = require('../lib/refs');
-const { StudyProfileSchema, TaskPatchSchema, z } = require('../lib/schemas');
-const { getExams, getMaterialMap, materialCard } = require('../services/masters');
-const { generatePlan, claimRedistribution, redistributeOverdue, nextStudyDate, isStudyDay } = require('../services/planService');
+const { StudyProfileSchema, TaskPatchSchema, LevelTestSubmitSchema, z } = require('../lib/schemas');
+const { getExams, getSubjects, getMaterialMap, materialCard } = require('../services/masters');
+const { generatePlan, claimRedistribution, redistributeOverdue, nextStudyDate, isStudyDay, examTooSoon } = require('../services/planService');
+const { MIN_PREP_DAYS } = require('../services/scheduler');
+const { QUESTIONS, publicQuestions, gradeLevelTest } = require('../services/levelTest');
 const { completionDelta, clampRate } = require('../services/progressCalc');
 const { diffDays, isValidDate } = require('../lib/dates');
 
@@ -37,12 +39,51 @@ router.put(
       throw new HttpError(400, 'EXAM_DATE_PAST', '시험일은 내일 이후 날짜여야 합니다. 다음 회차를 선택하거나 날짜를 다시 입력해 주세요.');
     }
     const dday = diffDays(req.today, profile.examDate);
+    // 새로 정하는 시험일은 최소 준비 기간을 지켜야 한다. 이미 저장된 시험일을 유지한 채 다른 조건만 바꾸는 경우는 허용
+    const saved = (await userRef(req.user.uid).get()).data()?.profile;
+    if (dday < MIN_PREP_DAYS && saved?.examDate !== profile.examDate) throw examTooSoon(dday);
     await userRef(req.user.uid).set(
       { profile: { ...profile, updatedAt: new Date().toISOString() }, targetExamId: profile.examId || null },
       { merge: true },
     );
     const notices = dday < 7 ? [{ code: 'SHORT_PERIOD', message: `시험까지 ${dday}일 남았습니다. 총정리 모드로 스케줄을 만드는 것을 권장합니다.` }] : [];
     res.json({ profile, dday, notices });
+  }),
+);
+
+// 가입 직후 레벨테스트
+router.get(
+  '/level-test',
+  ah(async (req, res) => {
+    const [snap, subjects] = await Promise.all([userRef(req.user.uid).get(), getSubjects('written')]);
+    res.json({
+      questions: publicQuestions(),
+      subjects: subjects.map((x) => ({ id: x.id, name: x.name })),
+      result: snap.data()?.levelTest || null,
+    });
+  }),
+);
+
+router.post(
+  '/level-test',
+  validate(LevelTestSubmitSchema),
+  ah(async (req, res) => {
+    const { answers } = req.valid;
+    if (QUESTIONS.some((q) => !Object.hasOwn(answers, q.id))) {
+      throw new HttpError(400, 'VALIDATION_ERROR', '모든 문항에 답해 주세요. 모르는 문항은 "잘 모르겠어요"를 선택하면 돼요.');
+    }
+    const { result, review } = gradeLevelTest(answers);
+    const levelTest = { ...result, takenAt: new Date().toISOString(), takenDate: req.today };
+    await userRef(req.user.uid).set({ levelTest, levelTestPending: false }, { merge: true });
+    res.status(201).json({ result: levelTest, review });
+  }),
+);
+
+router.post(
+  '/level-test/skip',
+  ah(async (req, res) => {
+    await userRef(req.user.uid).set({ levelTestPending: false, levelTestSkippedAt: new Date().toISOString() }, { merge: true });
+    res.json({ ok: true });
   }),
 );
 

@@ -7,7 +7,8 @@ const { optionalAuth } = require('../middleware/auth');
 const { userCol } = require('../lib/refs');
 const { StudyProfileSchema, z, STAGES, MATERIAL_TYPES, EXAM_TYPES } = require('../lib/schemas');
 const { getExams, getSubjects, getMaterials, getMaterialMap, materialCard } = require('../services/masters');
-const { computePlan } = require('../services/planService');
+const { computePlan, estimateForProfile, examTooSoon } = require('../services/planService');
+const { MIN_PREP_DAYS } = require('../services/scheduler');
 const { STAGE_ORDER, pickForTask } = require('../services/materialLogic');
 const { diffDays } = require('../lib/dates');
 
@@ -85,6 +86,21 @@ router.get(
   }),
 );
 
+// 하루 필요 학습 시간 추천 — 남은 학습량(단원 표준 시간·진도)과 학습일 수로 계산.
+// 로그인 상태면 단원별 진도와 오답 취약 비중까지 반영한다.
+router.post(
+  '/plans/estimate',
+  ipLimiter,
+  today,
+  optionalAuth,
+  validate(StudyProfileSchema),
+  ah(async (req, res) => {
+    const profile = req.valid;
+    if (profile.examDate <= req.today) throw new HttpError(400, 'EXAM_DATE_PAST', '시험일은 내일 이후 날짜여야 합니다.');
+    res.json(await estimateForProfile({ uid: req.user?.uid, profile, today: req.today }));
+  }),
+);
+
 // 비회원 스케줄 미리보기
 router.post(
   '/plans/preview',
@@ -94,6 +110,8 @@ router.post(
   ah(async (req, res) => {
     const profile = req.valid;
     if (profile.examDate <= req.today) throw new HttpError(400, 'EXAM_DATE_PAST', '시험일은 내일 이후 날짜여야 합니다.');
+    const dday = diffDays(req.today, profile.examDate);
+    if (dday < MIN_PREP_DAYS) throw examTooSoon(dday);
     const { result, materials } = await computePlan({ profile, today: req.today });
     const matMap = new Map(materials.map((m) => [m.id, m]));
     res.json({

@@ -29,7 +29,14 @@ function useScrollTo() {
 
 function MemberHome() {
   const navigate = useNavigate();
-  const { migrated, clearMigrated } = useAuth();
+  const { migrated, clearMigrated, me } = useAuth();
+  // 레벨테스트를 건너뛴 회원에게 응시 안내
+  const levelPrompt = me && !me.levelTest && (
+    <Notice tone="info" icon="spark">
+      레벨테스트(15문항, 약 5분)로 내 수준을 확인하면 학습 단계와 과목별 시간 배분을 더 정확하게 잡을 수 있어요.{' '}
+      <Link to="/level-test">레벨테스트 보기</Link>
+    </Notice>
+  );
   const [todayRef, scrollToToday] = useScrollTo();
   const today = useApi(() => api('/api/today'), []);
   const ready = today.data && !today.data.needsOnboarding && !today.data.needsPlan;
@@ -65,6 +72,7 @@ function MemberHome() {
           <h1>시험일만 알려 주세요.</h1>
           <p>남은 기간과 하루 학습 시간에 맞춰 과목별 스케줄과 오늘 할 일을 만들어 드려요.</p>
         </section>
+        {levelPrompt}
         <StartChoice planLabel="학습 계획 만들기" planDescription="시험일·학습 시간에 맞춰 계획 설정" onPlan={() => navigate('/onboarding')} />
       </div>
     );
@@ -136,6 +144,7 @@ function MemberHome() {
           </button>
         </Notice>
       )}
+      {levelPrompt}
       <DdayHero exam={d.exam} today={d.today} extra={d.inReviewPeriod && <p className="tag tag-amber inline">총정리 기간</p>} />
       <StartChoice onPlan={scrollToToday} />
 

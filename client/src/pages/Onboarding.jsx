@@ -1,17 +1,21 @@
 // UC-02 시험 정보 및 학습 조건 입력
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api, apiWithConfirm } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../hooks/useApi';
 import { loadGuest, saveGuest } from '../lib/guest';
-import { CONFIDENCE, DAYS, ddayLabel, diffDays, EXAM_TYPE, formatDate, STAGE, STAGE_DESC, todayKST, addDays } from '../lib/format';
+import { CONFIDENCE, DAYS, ddayLabel, diffDays, EXAM_TYPE, formatDate, minutesLabel, STAGE, STAGE_DESC, todayKST, addDays } from '../lib/format';
 import { ErrorBox, Loading, Notice, PageHeader } from '../components/ui';
 
 const STEPS = ['시험 정보', '학습 시간', '학습 단계', '과목별 진도·자신감'];
+const MIN_PREP_DAYS = 30; // 새 시험일의 최소 준비 기간 (서버에서도 같은 기준으로 검증)
+const hoursLabel = (m) => `${Math.round(m / 6) / 10}시간`;
 
 export default function Onboarding() {
-  const { user, refreshMe } = useAuth();
+  const { user, me, refreshMe } = useAuth();
+  // 레벨테스트 결과(추천 단계·과목별 자신감)는 새 학습 계획의 기본값으로 쓴다
+  const levelTest = me && me.uid === user?.uid ? me.levelTest : null;
   const navigate = useNavigate();
   const today = todayKST();
   const [step, setStep] = useState(0);
@@ -22,6 +26,7 @@ export default function Onboarding() {
   const attempt = useRef(null);
   const mounted = useRef(true);
   const owner = useRef(user?.uid || null);
+  const levelPrefilled = useRef(false);
   owner.current = user?.uid || null;
   const [form, setForm] = useState({
     examType: 'written',
@@ -44,7 +49,13 @@ export default function Onboarding() {
 
   useEffect(() => {
     const p = existing.data?.profile;
-    if (!p) return;
+    if (!p) {
+      if (levelTest && existing.data && !levelPrefilled.current) {
+        levelPrefilled.current = true;
+        setForm((f) => ({ ...f, stage: levelTest.recommendedStage, subjectConfidence: { ...levelTest.subjectConfidence } }));
+      }
+      return;
+    }
     setForm({
       examType: p.examType,
       examId: p.examId || '',
@@ -55,7 +66,7 @@ export default function Onboarding() {
       subjectProgress: p.subjectProgress || {},
       subjectConfidence: p.subjectConfidence || {},
     });
-  }, [existing.data]);
+  }, [existing.data, levelTest]);
 
   const examOptions = useMemo(() => (exams.data?.items || []).filter((e) => e.type === form.examType), [exams.data, form.examType]);
   const examDate = form.examId ? examOptions.find((e) => e.id === form.examId)?.examDate : form.customDate;
@@ -65,6 +76,40 @@ export default function Onboarding() {
   const refreshOnly = saveStage === 'refresh' && !!attempt.current?.planCreated && attempt.current.owner === (user?.uid || null);
   const fieldsLocked = saving || refreshOnly;
   const submitDisabled = saving || (!refreshOnly && (!subjectItems.length || (form.examId && (exams.loading || !!exams.error))));
+  const savedExamDate = existing.data?.profile?.examDate;
+  const tooSoon = dday != null && dday > 0 && dday < MIN_PREP_DAYS && examDate !== savedExamDate;
+
+  // 하루 필요 학습 시간: 남은 학습량·학습일 계산은 서버(단원 표준 시간·진도 반영)에서 한다.
+  // 학습 시간 단계와 마지막 단계에서만, 입력이 잠시 멈췄을 때 계산한다.
+  const hoursValid = Number.isInteger(Number(form.dailyHours) * 2) && form.dailyHours >= 0.5 && form.dailyHours <= 12;
+  const estimateBody =
+    (step === 1 || step === 3) && dday > 0 && !tooSoon && hoursValid && form.studyDays.length > 0 && subjectItems.length > 0 ? JSON.stringify(buildProfile()) : null;
+  const estimateLatest = useRef(null);
+  estimateLatest.current = estimateBody;
+  const estimate = useApi(
+    estimateBody
+      ? async () => {
+          await new Promise((r) => setTimeout(r, 350));
+          if (estimateLatest.current !== estimateBody) throw new Error('stale');
+          return api('/api/plans/estimate', { method: 'POST', body: JSON.parse(estimateBody) });
+        }
+      : null,
+    [estimateBody],
+  );
+
+  // 서버로 보내는 학습 조건 (저장·미리보기·하루 필요 시간 계산에 같이 사용)
+  function buildProfile() {
+    return {
+      examType: form.examType,
+      examId: form.examId || null,
+      examDate,
+      dailyHours: Number(form.dailyHours),
+      studyDays: [...form.studyDays],
+      stage: form.stage,
+      subjectProgress: Object.fromEntries(subjectItems.map((s) => [s.id, Number(form.subjectProgress[s.id] ?? 0)])),
+      subjectConfidence: Object.fromEntries(subjectItems.map((s) => [s.id, Number(form.subjectConfidence[s.id] ?? 2)])),
+    };
+  }
 
   function set(patch) {
     if (pending.current || refreshOnly) return;
@@ -85,6 +130,10 @@ export default function Onboarding() {
         return '올바른 시험일을 입력해 주세요.';
       }
       if (examDate <= today) return '시험일은 내일 이후 날짜여야 합니다.';
+      // 최소 30일 준비 기간. 이미 저장한 시험일을 그대로 두고 다른 조건만 바꿀 때는 허용
+      if (examDate < addDays(today, 30) && examDate !== existing.data?.profile?.examDate) {
+        return '시험일까지 최소 30일의 준비 기간이 필요해요. 다음 회차를 선택하거나 시험일을 다시 입력해 주세요.';
+      }
     }
     if (at === 1) {
       const hours = Number(form.dailyHours);
@@ -133,16 +182,7 @@ export default function Onboarding() {
     if (!attempt.current || attempt.current.owner !== (user?.uid || null)) {
       attempt.current = {
         owner: user?.uid || null,
-        profile: {
-          examType: form.examType,
-          examId: form.examId || null,
-          examDate,
-          dailyHours: Number(form.dailyHours),
-          studyDays: [...form.studyDays],
-          stage: form.stage,
-          subjectProgress: Object.fromEntries(subjectItems.map((s) => [s.id, Number(form.subjectProgress[s.id] ?? 0)])),
-          subjectConfidence: Object.fromEntries(subjectItems.map((s) => [s.id, Number(form.subjectConfidence[s.id] ?? 2)])),
-        },
+        profile: buildProfile(),
         profileSaved: false,
         planCreated: false,
         preview: null,
@@ -217,7 +257,7 @@ export default function Onboarding() {
             <div className="seg" role="radiogroup" aria-label="시험 구분">
               {['written', 'practical'].map((t) => (
                 <label key={t} className={`seg-item ${form.examType === t ? 'on' : ''}`}>
-                  <input type="radio" name="examType" checked={form.examType === t} onChange={() => set({ examType: t, examId: '', subjectProgress: {}, subjectConfidence: {} })} />
+                  <input type="radio" name="examType" checked={form.examType === t} onChange={() => set({ examType: t, examId: '', subjectProgress: {}, subjectConfidence: { ...(levelTest?.subjectConfidence || {}) } })} />
                   {EXAM_TYPE[t]}
                 </label>
               ))}
@@ -227,17 +267,21 @@ export default function Onboarding() {
               <select value={form.examId} disabled={exams.loading || !!exams.error} onChange={(e) => set({ examId: e.target.value, customDate: '' })}>
                 <option value="">목록에 없음 (시험일 직접 입력)</option>
                 {form.examId && !examOptions.some((e) => e.id === form.examId) && <option value={form.examId} disabled>이전 시험 회차 (다시 선택해 주세요)</option>}
-                {examOptions.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.year}년 {e.round}회 {EXAM_TYPE[e.type]} — {formatDate(e.examDate)}
-                  </option>
-                ))}
+                {examOptions.map((e) => {
+                  const short = e.examDate < addDays(today, MIN_PREP_DAYS) && e.examDate !== savedExamDate;
+                  return (
+                    <option key={e.id} value={e.id} disabled={short}>
+                      {e.year}년 {e.round}회 {EXAM_TYPE[e.type]} — {formatDate(e.examDate)}
+                      {short ? ' (준비 기간 30일 미만)' : ''}
+                    </option>
+                  );
+                })}
               </select>
             </label>
             {!form.examId && (
               <label className="field">
                 <span>시험일</span>
-                <input type="date" min={addDays(today, 1)} value={form.customDate} onChange={(e) => set({ customDate: e.target.value })} />
+                <input type="date" min={addDays(today, MIN_PREP_DAYS)} value={form.customDate} onChange={(e) => set({ customDate: e.target.value })} />
               </label>
             )}
             {dday != null && dday > 0 && (
@@ -245,7 +289,9 @@ export default function Onboarding() {
                 시험까지 <strong>{ddayLabel(dday)}</strong> ({formatDate(examDate)})
               </p>
             )}
-            {dday != null && dday > 0 && dday < 7 && <Notice tone="warn">남은 기간이 7일 미만이에요. 핵심 단원과 기출 위주의 총정리 모드로 계획을 만듭니다.</Notice>}
+            <p className="muted small">최소 {MIN_PREP_DAYS}일의 준비 기간을 두고 계획을 만들어요.</p>
+            {tooSoon && <Notice tone="warn">시험까지 {dday}일 남았어요. 최소 {MIN_PREP_DAYS}일의 준비 기간이 필요해서 다음 회차를 선택하거나 시험일을 다시 입력해 주세요.</Notice>}
+            {!tooSoon && dday != null && dday > 0 && dday < 7 && <Notice tone="warn">남은 기간이 7일 미만이에요. 핵심 단원과 기출 위주의 총정리 모드로 계획을 만듭니다.</Notice>}
           </fieldset>
         )}
 
@@ -276,12 +322,41 @@ export default function Onboarding() {
             <p className="muted small">
               주 {form.studyDays.length}일 × {form.dailyHours}시간 = 주당 {(form.studyDays.length * form.dailyHours).toFixed(1)}시간
             </p>
+            <EstimatePanel
+              estimate={estimate}
+              dailyHours={form.dailyHours}
+              onHours={(h) => set({ dailyHours: h })}
+              onDays={(days) => set({ studyDays: days })}
+              note="다음 단계에서 학습 단계·과목별 진도를 입력하면 마지막 단계에서 다시 계산해요."
+            />
           </div>
         )}
 
         {step === 2 && (
           <fieldset className="form">
             <legend className="h2">지금 어느 단계인가요?</legend>
+            {levelTest ? (
+              <Notice tone="info" icon="spark">
+                레벨테스트 결과 <strong>{levelTest.levelLabel}</strong>(정답률 {levelTest.rate}%) 기준으로 <strong>{STAGE[levelTest.recommendedStage]}</strong> 단계를 추천해요.
+                {form.stage !== levelTest.recommendedStage && (
+                  <div className="alert-actions">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline"
+                      onClick={() => set({ stage: levelTest.recommendedStage, subjectConfidence: { ...form.subjectConfidence, ...levelTest.subjectConfidence } })}
+                    >
+                      추천 단계·자신감 적용
+                    </button>
+                  </div>
+                )}
+              </Notice>
+            ) : (
+              user && (
+                <p className="muted small">
+                  어느 단계인지 모르겠다면 <Link to="/level-test?next=%2Fonboarding">레벨테스트</Link>로 확인해 보세요.
+                </p>
+              )
+            )}
             <div className="option-list">
               {Object.keys(STAGE).map((s) => (
                 <label key={s} className={`option ${form.stage === s ? 'on' : ''}`}>
@@ -300,6 +375,7 @@ export default function Onboarding() {
           <div className="form">
             <h2>과목별로 얼마나 해 두었나요?</h2>
             <p className="muted small">진도는 이미 공부한 비율, 자신감은 체감 이해도예요. 자신감이 낮은 과목에 시간을 더 배분합니다.</p>
+            {levelTest && <p className="muted small">자신감 기본값은 레벨테스트 과목별 정답률로 채웠어요. 직접 바꿀 수 있어요.</p>}
             {subjects.loading && <Loading />}
             <ErrorBox error={subjectError} onRetry={subjects.reload} />
             <ul className="subject-inputs">
@@ -338,6 +414,13 @@ export default function Onboarding() {
                 );
               })}
             </ul>
+            <EstimatePanel
+              estimate={estimate}
+              dailyHours={form.dailyHours}
+              onHours={(h) => set({ dailyHours: h })}
+              onDays={(days) => set({ studyDays: days })}
+              onEditDays={() => setStep(1)}
+            />
           </div>
         )}
 
@@ -362,5 +445,106 @@ export default function Onboarding() {
         </div>
       </div>
     </div>
+  );
+}
+
+// 하루 필요 학습 시간 안내 — 서버 계산 결과(/api/plans/estimate)를 보여 주고, 부족하면 시간·요일 조정을 제안한다.
+function EstimatePanel({ estimate, dailyHours, onHours, onDays, onEditDays, note }) {
+  const e = estimate.data;
+  if (estimate.loading) return <p className="muted small" role="status">남은 학습량으로 하루 필요 시간을 계산하는 중…</p>;
+  if (estimate.error) {
+    return (
+      <p className="muted small">
+        하루 필요 시간을 계산하지 못했어요.{' '}
+        <button type="button" className="link-btn" onClick={estimate.reload}>
+          다시 계산
+        </button>
+      </p>
+    );
+  }
+  if (!e || typeof e.studyDayCount !== 'number') return null;
+  if (e.recommendedDailyHours === 0) {
+    return (
+      <Notice tone="success" icon="check">
+        모든 단원을 마쳐 남은 기간은 총정리로 배정돼요.
+      </Notice>
+    );
+  }
+
+  const summary = (
+    <p>
+      남은 학습량 <strong>{hoursLabel(e.learnMinutes)}</strong>
+      {e.reviewMinutes != null && (
+        <>
+          {' '}+ 총정리 {hoursLabel(e.reviewMinutes)} = 총 <strong>{hoursLabel(e.totalMinutes)}</strong>
+        </>
+      )}{' '}
+      · 학습일 <strong>{e.studyDayCount}일</strong>(총정리 {e.reviewDayCount}일 포함)
+      <br />
+      {e.recommendedDailyHours != null ? (
+        <>
+          → 하루 <strong>{e.recommendedDailyHours}시간</strong> 학습을 권장해요.
+        </>
+      ) : (
+        '→ 선택한 요일로는 하루 12시간을 넘게 공부해야 해요.'
+      )}
+    </p>
+  );
+
+  if (e.enough) {
+    return (
+      <Notice tone="success" icon="check">
+        {summary}
+        선택한 하루 {dailyHours}시간이면 충분해요.
+        {note && <span className="muted small"> {note}</span>}
+      </Notice>
+    );
+  }
+
+  const sh = e.shortage;
+  return (
+    <Notice tone="warn" icon="clock">
+      {summary}
+      선택한 하루 {dailyHours}시간으로는
+      {sh.dailyMinutes != null ? (
+        <>
+          {' '}하루 {minutesLabel(sh.dailyMinutes)}, 시험일까지 총 <strong>{hoursLabel(sh.totalMinutes)}</strong>이 부족해요.
+        </>
+      ) : (
+        ' 시간이 부족해요.'
+      )}{' '}
+      하루 학습 시간이나 학습 요일을 조정해 주세요.
+      {!sh.byDays && sh.everyDay && <> 학습 요일을 모두 써도 하루 {sh.everyDay}시간이 필요해요.</>}
+      <div className="alert-actions">
+        {sh.byHours != null && (
+          <button type="button" className="btn btn-sm btn-outline" onClick={() => onHours(sh.byHours)}>
+            하루 {sh.byHours}시간으로 맞추기
+          </button>
+        )}
+        {sh.byDays && (
+          <button type="button" className="btn btn-sm btn-outline" onClick={() => onDays(sh.byDays.studyDays)}>
+            {sh.byDays.addedDays.map((d) => DAYS[d]).join('·')}요일 추가하기
+          </button>
+        )}
+        {!sh.byDays && sh.everyDay && (
+          <button
+            type="button"
+            className="btn btn-sm btn-outline"
+            onClick={() => {
+              onDays([0, 1, 2, 3, 4, 5, 6]);
+              onHours(sh.everyDay);
+            }}
+          >
+            매일 {sh.everyDay}시간으로 맞추기
+          </button>
+        )}
+        {onEditDays && (
+          <button type="button" className="btn btn-sm btn-ghost" onClick={onEditDays}>
+            학습 시간 단계로 이동
+          </button>
+        )}
+      </div>
+      {note && <span className="muted small">{note}</span>}
+    </Notice>
   );
 }

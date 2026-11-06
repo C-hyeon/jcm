@@ -4,7 +4,7 @@ const { db, FieldValue } = require('../config/firebase');
 const { userRef, userCol, metaRef, commitInChunks } = require('../lib/refs');
 const { HttpError } = require('../lib/httpError');
 const { getSubjects, getMaterials } = require('./masters');
-const { buildPlan, redistribute, listStudyDates, floorStep, MIN_CHUNK } = require('./scheduler');
+const { buildPlan, estimateLoad, redistribute, listStudyDates, floorStep, MIN_CHUNK, MIN_PREP_DAYS } = require('./scheduler');
 const { scoresFromStats } = require('./weakness');
 const { pickForTask } = require('./materialLogic');
 const { subjectRate } = require('./progressCalc');
@@ -39,6 +39,45 @@ function addTo(map, key, v) {
   if (map[key] <= 0) delete map[key];
 }
 
+// 새 시험일이 최소 준비 기간(30일)보다 가까울 때
+function examTooSoon(dday) {
+  return new HttpError(
+    400,
+    'EXAM_TOO_SOON',
+    `시험까지 ${dday}일 남았습니다. 최소 ${MIN_PREP_DAYS}일의 준비 기간이 필요해요. 다음 회차를 선택하거나 시험일을 다시 입력해 주세요.`,
+  );
+}
+
+// 회원의 단원별 진도와 오답 취약 비중 (스케줄 생성·하루 필요 시간 추천에서 같이 사용)
+async function loadLearningState(uid, today) {
+  if (!uid) return { unitRates: {}, weakShareBySubject: {} };
+  const [progSnap, statsSnap] = await Promise.all([userCol(uid, 'progress').get(), metaRef(uid, 'wrongStats').get()]);
+  const unitRates = {};
+  progSnap.forEach((d) => {
+    if (typeof d.data().rate === 'number') unitRates[d.id] = d.data().rate;
+  });
+  const weak = scoresFromStats(statsSnap.exists ? statsSnap.data().tags : {}, today);
+  return { unitRates, weakShareBySubject: weak.bySubject };
+}
+
+// 남은 학습량과 학습일 수로 하루 필요 시간 계산 (비회원은 입력한 과목별 진도만 사용)
+async function estimateForProfile({ uid, profile, today }) {
+  const [subjects, state] = await Promise.all([getSubjects(profile.examType), loadLearningState(uid, today)]);
+  if (!subjects.length) throw new HttpError(500, 'MASTER_MISSING', '과목 마스터 데이터가 없습니다. 관리자에게 문의해 주세요.');
+  return estimateLoad({
+    today,
+    examDate: profile.examDate,
+    dailyHours: profile.dailyHours,
+    studyDays: profile.studyDays,
+    stage: profile.stage,
+    subjects,
+    unitRates: state.unitRates,
+    subjectProgress: profile.subjectProgress,
+    subjectConfidence: profile.subjectConfidence,
+    weakShareBySubject: state.weakShareBySubject,
+  });
+}
+
 async function computePlan({ profile, today, unitRates = {}, weakShareBySubject = {} }) {
   const [subjects, materials] = await Promise.all([getSubjects(profile.examType), getMaterials()]);
   if (!subjects.length) throw new HttpError(500, 'MASTER_MISSING', '과목 마스터 데이터가 없습니다. 관리자에게 문의해 주세요.');
@@ -51,6 +90,7 @@ async function computePlan({ profile, today, unitRates = {}, weakShareBySubject 
     unitRates,
     subjectProgress: profile.subjectProgress,
     subjectConfidence: profile.subjectConfidence,
+    stage: profile.stage,
     weakShareBySubject,
   });
   if (result.error) {
@@ -71,13 +111,8 @@ async function generatePlan(uid, { today, confirmOverwrite = false }) {
     throw new HttpError(409, 'PLAN_EXISTS', '이미 만든 스케줄이 있습니다. 오늘 이후 일정을 새로 만들까요? (완료한 과제는 유지됩니다)');
   }
 
-  const [progSnap, statsSnap] = await Promise.all([userCol(uid, 'progress').get(), metaRef(uid, 'wrongStats').get()]);
-  const unitRates = {};
-  progSnap.forEach((d) => {
-    if (typeof d.data().rate === 'number') unitRates[d.id] = d.data().rate;
-  });
-  const weak = scoresFromStats(statsSnap.exists ? statsSnap.data().tags : {}, today);
-  const { result, materials, baseOverallRate } = await computePlan({ profile, today, unitRates, weakShareBySubject: weak.bySubject });
+  const { unitRates, weakShareBySubject } = await loadLearningState(uid, today);
+  const { result, materials, baseOverallRate } = await computePlan({ profile, today, unitRates, weakShareBySubject });
 
   const ops = [];
   if (user.activePlanId) {
@@ -240,4 +275,4 @@ function isStudyDay(plan, today) {
   return plan.studyDays.includes(dayOfWeek(today));
 }
 
-module.exports = { computePlan, generatePlan, claimRedistribution, redistributeOverdue, adjustFutureTasksForUnit, nextStudyDate, isStudyDay, taskRecord };
+module.exports = { examTooSoon, computePlan, estimateForProfile, generatePlan, claimRedistribution, redistributeOverdue, adjustFutureTasksForUnit, nextStudyDate, isStudyDay, taskRecord };

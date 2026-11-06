@@ -60,6 +60,9 @@ class DocRef {
   async set(data, opts) {
     this.db._set(this.path, data, opts);
   }
+  async create(data) {
+    this.db._create(this.path, data);
+  }
   async update(data) {
     this.db._update(this.path, data);
   }
@@ -185,6 +188,11 @@ class FakeFirestore {
   _set(path, data, opts) {
     const prev = this.store.get(path);
     this.store.set(path, opts?.merge ? deepMerge(prev, data) : resolve(data, undefined));
+  }
+  // 실제 Firestore처럼 문서가 이미 있으면 ALREADY_EXISTS(6)로 실패
+  _create(path, data) {
+    if (this.store.has(path)) throw Object.assign(new Error(`ALREADY_EXISTS: ${path}`), { code: 6 });
+    this.store.set(path, resolve(data, undefined));
   }
   _update(path, data) {
     const prev = this.store.get(path);

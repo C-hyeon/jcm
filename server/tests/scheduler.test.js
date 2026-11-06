@@ -1,5 +1,5 @@
 'use strict';
-const { buildPlan, redistribute, allocate, listStudyDates, subjectWeight } = require('../src/services/scheduler');
+const { buildPlan, redistribute, allocate, listStudyDates, subjectWeight, REVIEW_RATIO } = require('../src/services/scheduler');
 const { addDays } = require('../src/lib/dates');
 const { subjects } = require('./helpers');
 
@@ -119,5 +119,75 @@ describe('UC-04 미완료 과제 재배분', () => {
     const res = redistribute({ overdue, today: TODAY, studyDates: plan.studyDates, reviewStartDate: plan.reviewStartDate, capacity: 120, usage, reviewTasksByDate });
     expect(res.moves[0].date).toBe(reviewDates[0]);
     expect(res.reviewUpdates[0]).toEqual({ id: 'r0', minutes: 60 });
+  });
+});
+
+describe('UC-03 현재 학습 단계 반영', () => {
+  const base = { today: TODAY, examDate: addDays(TODAY, 90), dailyHours: 2, studyDays: WEEKDAYS, subjects: subjects('written') };
+  const plans = Object.fromEntries(['intro', 'concept', 'practice', 'final'].map((s) => [s, buildPlan({ ...base, stage: s })]));
+  const studyMinutes = (p) => p.tasks.filter((t) => t.type === 'study').reduce((a, t) => a + t.minutes, 0);
+
+  test('단계가 뒤로 갈수록 총정리 기간이 길어진다 (10% → 15% → 25% → 40%)', () => {
+    const days = plans.intro.stats.studyDayCount;
+    expect(plans.intro.stats.reviewDayCount).toBe(Math.ceil(days * 0.1));
+    expect(plans.concept.stats.reviewDayCount).toBe(Math.ceil(days * REVIEW_RATIO));
+    expect(plans.practice.stats.reviewDayCount).toBe(Math.ceil(days * 0.25));
+    expect(plans.final.stats.reviewDayCount).toBe(Math.ceil(days * 0.4));
+    expect(plans.final.reviewStartDate < plans.concept.reviewStartDate).toBe(true);
+  });
+
+  test('단원 학습 시간: 입문 > 개념 > 문제 풀이 > 총정리', () => {
+    expect(plans.intro.stats.requiredMinutes).toBeGreaterThan(plans.concept.stats.requiredMinutes);
+    expect(plans.concept.stats.requiredMinutes).toBeGreaterThan(plans.practice.stats.requiredMinutes);
+    expect(plans.practice.stats.requiredMinutes).toBeGreaterThan(plans.final.stats.requiredMinutes);
+    expect(studyMinutes(plans.practice)).toBeLessThan(studyMinutes(plans.concept));
+  });
+
+  test('모든 단계에서 일별 가용시간 초과 없음·미학습 단원 누락 없음', () => {
+    const units = subjects('written').flatMap((s) => s.units);
+    Object.values(plans).forEach((p) => {
+      Object.values(sumByDate(p.tasks)).forEach((m) => expect(m).toBeLessThanOrEqual(120));
+      const scheduled = new Set(p.tasks.filter((t) => t.type === 'study').map((t) => t.unitId));
+      units.forEach((u) => expect(scheduled.has(u.id)).toBe(true));
+    });
+  });
+
+  test('총정리 단계는 핵심 단원을 먼저 배치한다', () => {
+    const study = plans.final.tasks.filter((t) => t.type === 'study');
+    const coreIds = new Set(subjects('written').flatMap((s) => s.units).filter((u) => u.core).map((u) => u.id));
+    const firstNonCore = study.findIndex((t) => !coreIds.has(t.unitId));
+    expect(firstNonCore).toBeGreaterThan(0);
+    expect(study.slice(firstNonCore).some((t) => coreIds.has(t.unitId))).toBe(false);
+  });
+
+  test('시간이 빠듯할 때 총정리 단계는 핵심 단원에 더 많은 시간을 준다', () => {
+    const needs = [
+      { unitId: 'core', need: 200, core: true },
+      { unitId: 'etc', need: 200, core: false },
+    ];
+    const normal = allocate(needs, 320);
+    const final = allocate(needs, 320, { corePriority: true });
+    expect(normal.minutes.get('core')).toBe(normal.minutes.get('etc'));
+    expect(final.minutes.get('core')).toBeGreaterThan(final.minutes.get('etc'));
+  });
+
+  test('단계별 체크 항목과 안내 문구', () => {
+    const first = (p) => p.tasks.find((t) => t.type === 'study').checklist[0].text;
+    expect(first(plans.intro)).toMatch('기본 용어');
+    expect(first(plans.concept)).toMatch('핵심 개념 정리');
+    expect(first(plans.practice)).toMatch('기출·예상 문제 풀이');
+    expect(first(plans.final)).toMatch('핵심 요약 회독');
+    Object.entries(plans).forEach(([stage, p]) => {
+      expect(p.warnings[0]).toMatchObject({ code: 'STAGE_APPLIED', stage });
+      expect(p.stats.stage).toBe(stage);
+    });
+  });
+
+  test('단계 값이 없거나 잘못되면 개념 학습 단계로 처리 (기존 동작 유지)', () => {
+    const none = buildPlan(base);
+    expect(none.stats.stage).toBe('concept');
+    expect(none.stats.reviewDayCount).toBe(plans.concept.stats.reviewDayCount);
+    expect(none.tasks).toEqual(plans.concept.tasks);
+    expect(buildPlan({ ...base, stage: 'unknown' }).stats.stage).toBe('concept');
   });
 });

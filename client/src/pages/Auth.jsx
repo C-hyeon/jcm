@@ -23,7 +23,7 @@ const ERR = {
 const msg = (e) => ERR[e.code] || '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.';
 const NEXT_PATHS = new Set(['/', '/onboarding', '/schedule', '/materials', '/more', '/progress', '/wrong-notes', '/path', '/recommend', '/dashboard', '/profile', '/admin']);
 
-function safeNext(n) {
+export function safeNext(n) {
   if (typeof n !== 'string' || !n.startsWith('/') || n.startsWith('//') || /[\\\u0000-\u0020\u007f]/.test(n)) return '/';
   try {
     const target = new URL(n, window.location.origin);

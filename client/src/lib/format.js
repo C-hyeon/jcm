@@ -1,10 +1,10 @@
 export const EXAM_TYPE = { written: '필기', practical: '실기' };
 export const STAGE = { intro: '입문', concept: '개념 학습', practice: '문제 풀이', final: '총정리' };
 export const STAGE_DESC = {
-  intro: '범위가 낯설고 무엇부터 할지 모름',
-  concept: '과목별 개념을 처음부터 정리하는 중',
-  practice: '개념은 봤고 기출·문제를 푸는 중',
-  final: '시험 직전, 기출 회독과 오답 정리',
+  intro: '범위가 낯설고 무엇부터 할지 모름 · 개념 시간을 넉넉히, 총정리 10%',
+  concept: '과목별 개념을 처음부터 정리하는 중 · 단원 순서대로, 총정리 15%',
+  practice: '개념은 봤고 기출·문제를 푸는 중 · 문제 풀이 위주, 총정리 25%',
+  final: '시험 직전, 기출 회독과 오답 정리 · 핵심 단원 우선, 총정리 40%',
 };
 export const MATERIAL_TYPE = { video: '영상', blog: '블로그', cbt: 'CBT', official: '공식 자료', doc: '문서·실습' };
 export const DIFFICULTY = { high: '상', mid: '중', low: '하' };

@@ -49,6 +49,11 @@ const TaskPatchSchema = z
   })
   .refine((o) => Object.keys(o).length > 0, '변경할 항목이 없습니다.');
 
+// 레벨테스트 제출: 문항 id → 선택지 번호(0~3), "잘 모르겠어요"는 null
+const LevelTestSubmitSchema = z.object({
+  answers: z.record(Id, z.number().int().min(0).max(3).nullable()),
+});
+
 const ProgressPutSchema = z.object({
   unitId: Id,
   rate: z.number().refine((v) => PROGRESS_STEPS.includes(v), '진행률은 0, 25, 50, 75, 100% 중에서 선택해 주세요.'),
@@ -144,6 +149,7 @@ module.exports = {
   StudyProfileSchema,
   MeUpdateSchema,
   TaskPatchSchema,
+  LevelTestSubmitSchema,
   ProgressPutSchema,
   WrongNoteCreateSchema,
   WrongNotePatchSchema,

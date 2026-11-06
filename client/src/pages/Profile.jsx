@@ -6,7 +6,7 @@ import { auth, googleProvider } from '../firebase';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../hooks/useApi';
-import { EXAM_TYPE, formatDate } from '../lib/format';
+import { EXAM_TYPE, formatDate, STAGE } from '../lib/format';
 import { ErrorBox, Loading, Notice, PageHeader } from '../components/ui';
 
 function ProfileForm({ user, me, refreshMe, exams }) {
@@ -188,6 +188,24 @@ export default function Profile() {
       <section className="card">
         <h2>프로필</h2>
         <ProfileForm key={user?.uid} user={user} me={me} refreshMe={refreshMe} exams={exams} />
+      </section>
+
+      <section className="card" aria-labelledby="level-h">
+        <h2 id="level-h">내 수준 (레벨테스트)</h2>
+        {me?.levelTest ? (
+          <p>
+            <strong>{me.levelTest.levelLabel}</strong> · {me.levelTest.total}문항 중 {me.levelTest.correct}문항 정답(정답률 {me.levelTest.rate}%) · 추천 학습 단계 {STAGE[me.levelTest.recommendedStage]}
+            <br />
+            <span className="muted small">{formatDate(me.levelTest.takenDate || me.levelTest.takenAt.slice(0, 10))} 응시. 학습 조건 수정 화면에서 추천 단계·과목별 자신감을 적용할 수 있어요.</span>
+          </p>
+        ) : (
+          <p className="muted">아직 레벨테스트를 보지 않았어요. 결과는 학습 단계와 과목별 시간 배분에 반영돼요.</p>
+        )}
+        <div className="row-end">
+          <Link to="/level-test?next=%2Fprofile" className="btn btn-outline">
+            {me?.levelTest ? '다시 응시하기' : '레벨테스트 보기'}
+          </Link>
+        </div>
       </section>
 
       <section className="card">

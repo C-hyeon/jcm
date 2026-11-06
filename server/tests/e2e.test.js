@@ -62,10 +62,28 @@ describe('시나리오: 수험생 A', () => {
     expect(res.body.code).toBe('EXAM_DATE_PAST');
   });
 
-  test('남은 기간 7일 미만이면 총정리 모드 안내', async () => {
-    const res = await request(app).put('/api/study-profile').set('Authorization', A).send(profile(5));
-    expect(res.status).toBe(200);
-    expect(res.body.notices[0].code).toBe('SHORT_PERIOD');
+  test('새 시험일은 최소 30일 준비 기간 필요 (29일 거부, 30일 허용)', async () => {
+    const tooSoon = await request(app).put('/api/study-profile').set('Authorization', A).send(profile(29));
+    expect(tooSoon.status).toBe(400);
+    expect(tooSoon.body.code).toBe('EXAM_TOO_SOON');
+    expect(tooSoon.body.message).toContain('30일');
+    const preview = await request(app).post('/api/plans/preview').send(profile(29));
+    expect(preview.body.code).toBe('EXAM_TOO_SOON');
+    await request(app).put('/api/study-profile').set('Authorization', A).send(profile(30)).expect(200);
+  });
+
+  test('저장된 시험일을 유지한 채 조건만 바꾸면 30일 미만이어도 허용 (7일 미만이면 총정리 안내)', async () => {
+    const p = profile(30);
+    // 시험 25일 전에 접속해 같은 시험일로 하루 학습 시간만 변경
+    const later = await request(app).put('/api/study-profile').set('Authorization', A).set('X-Debug-Today', addDays(TODAY, 5)).send({ ...p, dailyHours: 3 });
+    expect(later.status).toBe(200);
+    expect(later.body.dday).toBe(25);
+    const last = await request(app).put('/api/study-profile').set('Authorization', A).set('X-Debug-Today', addDays(TODAY, 25)).send(p);
+    expect(last.status).toBe(200);
+    expect(last.body.notices[0].code).toBe('SHORT_PERIOD');
+    // 다른 날짜로 바꾸는 것은 다시 30일 규칙 적용
+    const changed = await request(app).put('/api/study-profile').set('Authorization', A).set('X-Debug-Today', addDays(TODAY, 25)).send({ ...p, examDate: addDays(TODAY, 40) });
+    expect(changed.body.code).toBe('EXAM_TOO_SOON');
   });
 
   test('학습 조건 저장 → 스케줄 생성 → 중복 생성 시 덮어쓰기 확인(409)', async () => {
@@ -282,7 +300,8 @@ describe('실기·짧은 기간 계정', () => {
     const C = 'Bearer test:carol';
     await request(app).get('/api/me').set('Authorization', C);
     const p = { examType: 'practical', examDate: addDays(TODAY, 21), dailyHours: 1, studyDays: [1, 3, 5, 6], stage: 'final', subjectProgress: {}, subjectConfidence: {} };
-    await request(app).put('/api/study-profile').set('Authorization', C).send(p).expect(200);
+    // 30일 전에 시험일을 정해 두고, 21일 남은 오늘 스케줄을 만든다
+    await request(app).put('/api/study-profile').set('Authorization', C).set('X-Debug-Today', addDays(TODAY, -9)).send(p).expect(200);
     const res = await request(app).post('/api/plans').set('Authorization', C).send({});
     expect(res.status).toBe(201);
     expect(res.body.plan.warnings.map((w) => w.code)).toContain('TIME_SHORTAGE');

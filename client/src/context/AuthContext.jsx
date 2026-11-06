@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 import { api } from '../api/client';
@@ -28,9 +28,17 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [migrated, setMigrated] = useState(false);
 
+  // 가입 직후에는 onAuthStateChanged의 GET과 가입 화면의 PUT→GET이 동시에 진행된다.
+  // 먼저 보낸(가입 정보 저장 전) 응답이 늦게 도착해 최신 정보를 덮어쓰지 않도록
+  // 이미 반영된 요청보다 오래된 응답은 버린다.
+  const seq = useRef({ issued: 0, applied: 0 });
   const refreshMe = useCallback(async () => {
+    const id = ++seq.current.issued;
     const data = await api('/api/me');
-    setMe(data);
+    if (id > seq.current.applied) {
+      seq.current.applied = id;
+      setMe(data);
+    }
     return data;
   }, []);
 
@@ -51,6 +59,8 @@ export function AuthProvider({ children }) {
             console.warn(e);
           }
         } else {
+          // 로그아웃 이전에 보낸 요청의 응답이 뒤늦게 반영되지 않도록 무효화
+          seq.current.applied = ++seq.current.issued;
           setMe(null);
           setIsAdmin(false);
         }
