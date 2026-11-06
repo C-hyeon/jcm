@@ -13,7 +13,7 @@ const apiSource=fs.readFileSync(path.join(root,'client/src/api/client.js'),'utf8
 const confirmNode=parse(apiSource,{sourceType:'module'}).program.body.find(n=>n.declaration?.id?.name==='apiWithConfirm').declaration;
 const handlers=functions.map(n=>source.slice(n.start,n.end)).join('\n')+'\n'+apiSource.slice(confirmNode.start,confirmNode.end);
 const subjects=[{id:'w1',name:'소프트웨어 설계'},{id:'w2',name:'데이터베이스 구축'}];
-const form=()=>({examType:'written',examId:'',customDate:'2026-11-13',dailyHours:2,studyDays:[1,2,3,4,5],stage:'intro',subjectProgress:{w1:25},subjectConfidence:{w1:1}});
+const form=()=>({examType:'written',examId:'',customDate:'2026-11-20',dailyHours:2,studyDays:[1,2,3,4,5],stage:'intro',subjectProgress:{w1:25},subjectConfidence:{w1:1}});
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject}};
 const fail=(status=503,code='QA_FAILURE')=>Object.assign(new Error('다시 시도해 주세요.'),{status,code});
 const date=(d,n)=>{const [y,m,day]=d.split('-').map(Number);return new Date(Date.UTC(y,m-1,day)+n*86400000).toISOString().slice(0,10)};
@@ -57,6 +57,8 @@ for(const [name,patch,step] of [
   const h=harness({state:{form:{...form(),...patch}}});await h.submit();assert.equal(h.calls.length,0);assert.equal(h.state.step,step);assert.ok(h.state.error.message);
  });
 }
+test('new exam date needs at least 30 days of preparation',async()=>{const h=harness({state:{form:{...form(),customDate:'2026-11-15'}}});await h.submit();assert.equal(h.calls.length,0);assert.equal(h.state.step,0);assert.match(h.state.error.message,/30일/);const ok=harness({state:{form:{...form(),customDate:'2026-11-16'}}});await ok.submit();assert.equal(ok.navigations.length,1)});
+test('keeping a saved exam date under 30 days still allows editing other conditions',async()=>{const h=harness({existing:{data:{profile:{examDate:'2026-10-30'}}},state:{form:{...form(),customDate:'2026-10-30',dailyHours:3}}});await h.submit();assert.equal(h.calls[0].body.examDate,'2026-10-30');assert.equal(h.navigations.length,1)});
 test('step boundaries remain 0..3',()=>{const h=harness({state:{step:0}});h.previousStep();assert.equal(h.state.step,0);h.state.step=3;h.nextStep();assert.equal(h.state.step,3)});
 test('0.5 and 12 hours and 0/100 progress are valid',async()=>{for(const hours of [0.5,12]){const h=harness({state:{form:{...form(),dailyHours:hours,subjectProgress:{w1:0,w2:100}}}});await h.submit();assert.equal(h.navigations.length,1)}});
 test('normal logged-in flow preserves endpoints, defaults and navigation',async()=>{
@@ -117,7 +119,7 @@ test('editing after plan failure starts a new explicitly changed profile',async(
  const writes=h.calls.filter(n=>n.method==='PUT');assert.equal(writes.length,2);assert.equal(writes[1].body.dailyHours,3);
 });
 test('date is revalidated when retrying a plan after midnight',async()=>{
- const h=harness({state:{form:{...form(),customDate:'2026-10-18'}},api:route=>{if(route==='/api/plans')throw fail();return {ok:true}}});
+ const h=harness({state:{form:{...form(),customDate:'2026-11-16'}},api:route=>{if(route==='/api/plans')throw fail();return {ok:true}}});
  await h.submit();const before=h.calls.length;h.scope.today='2026-10-18';await h.submit();assert.equal(h.calls.length,before);assert.equal(h.state.step,0);
 });
 test('unmount after profile save stops further mutations',async()=>{

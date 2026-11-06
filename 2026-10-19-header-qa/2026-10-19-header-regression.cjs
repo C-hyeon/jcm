@@ -75,6 +75,16 @@ const authHarnessAdditions = [
   "  scope.fields = {\n    reject: (_field, message) => scope.setError(message),\n    clear: () => scope.setError(''),\n    setFormError: scope.setError,\n  };\n",
   "  keys.push('field');\n",
 ];
+// 2026-11 최소 준비 기간(30일) 도입으로 승인된 온보딩 하네스 변경: [변경 후, 변경 전]
+const onboardingMinPrepChanges = [
+  ["customDate:'2026-11-20',dailyHours:2", "customDate:'2026-11-13',dailyHours:2"],
+  ["const h=harness({state:{form:{...form(),customDate:'2026-11-16'}},api:route=>", "const h=harness({state:{form:{...form(),customDate:'2026-10-18'}},api:route=>"],
+  [
+    "test('new exam date needs at least 30 days of preparation',async()=>{const h=harness({state:{form:{...form(),customDate:'2026-11-15'}}});await h.submit();assert.equal(h.calls.length,0);assert.equal(h.state.step,0);assert.match(h.state.error.message,/30일/);const ok=harness({state:{form:{...form(),customDate:'2026-11-16'}}});await ok.submit();assert.equal(ok.navigations.length,1)});\n" +
+      "test('keeping a saved exam date under 30 days still allows editing other conditions',async()=>{const h=harness({existing:{data:{profile:{examDate:'2026-10-30'}}},state:{form:{...form(),customDate:'2026-10-30',dailyHours:3}}});await h.submit();assert.equal(h.calls[0].body.examDate,'2026-10-30');assert.equal(h.navigations.length,1)});\n",
+    '',
+  ],
+];
 for (const [file, changed, original, digest] of comparisons) {
   test(`${file}: only approved CSS comparison, baseline access and auth harness are changed`, () => {
     const text = fs.readFileSync(path.join(root, file), 'utf8');
@@ -89,6 +99,12 @@ for (const [file, changed, original, digest] of comparisons) {
       for (const addition of authHarnessAdditions) {
         assert.equal(restored.split(addition).length, 2);
         restored = restored.replace(addition, '');
+      }
+    }
+    if (file === '2026-10-17-onboarding-tests/2026-10-17-onboarding-regression.cjs') {
+      for (const [now, before] of onboardingMinPrepChanges) {
+        assert.equal(restored.split(now).length, 2);
+        restored = restored.replace(now, () => before);
       }
     }
     if (file === '2026-10-16-wrong-notes-qa/2026-10-16-wrong-notes-regression.cjs') {

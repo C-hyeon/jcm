@@ -110,7 +110,7 @@ test('the existing Suspense loading state and page child remain intact', () => {
   assert.equal(suspense.props.fallback.type, scope.Loading);
   assert.equal(suspense.props.children, child);
 });
-test('all seven lazy routes still use the guarded path, with admin access limited to admin', () => {
+test('all eight lazy routes (including the 2026-11 level test) still use the guarded path, with admin access limited to admin', () => {
   const routes = [];
   function visit(node) {
     if (!node || typeof node !== 'object') return;
@@ -121,9 +121,9 @@ test('all seven lazy routes still use the guarded path, with admin access limite
     }
   }
   visit(ast.program);
-  const expected = { progress: 'Progress', 'wrong-notes': 'WrongNotes', path: 'LearningPath', recommend: 'Recommend', dashboard: 'Dashboard', profile: 'Profile', admin: 'Admin' };
+  const expected = { progress: 'Progress', 'wrong-notes': 'WrongNotes', path: 'LearningPath', recommend: 'Recommend', dashboard: 'Dashboard', profile: 'Profile', admin: 'Admin', 'level-test': 'LevelTest' };
   const guarded = routes.filter(node => node.openingElement.attributes.some(attr => attr.name?.name === 'element' && attr.value?.expression?.callee?.name === 'guard'));
-  assert.equal(guarded.length, 7);
+  assert.equal(guarded.length, 8);
   for (const node of guarded) {
     const attrs = Object.fromEntries(node.openingElement.attributes.filter(attr => attr.name).map(attr => [attr.name.name, attr.value]));
     const route = attrs.path.value, call = attrs.element.expression;
