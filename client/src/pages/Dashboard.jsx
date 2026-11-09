@@ -7,7 +7,7 @@ import { useApi } from '../hooks/useApi';
 import { formatDate, pct } from '../lib/format';
 import { EmptyState, ErrorBox, Loading, PageHeader } from '../components/ui';
 
-const C = { primary: '#0f5c55', accent: '#c2410c', soft: '#94a3b8', grid: '#e7e5df', ink: '#334155' };
+const C = { primary: '#4338ca', accent: '#c2410c', soft: '#94a3b8', grid: '#e4e4ef', ink: '#334155' };
 const TOOLTIP_PROPS = { wrapperStyle: { maxWidth: '100%' }, contentStyle: { whiteSpace: 'normal' } };
 const shortDate = (d) => formatDate(d, false).replace('월 ', '/').replace('일', '');
 

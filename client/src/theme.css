@@ -1,0 +1,65 @@
+/* 브랜드 테마 — 앱 아이콘(인디고·라벤더·골드)에 맞춘 색상.
+   styles.css(레이아웃·컴포넌트, QA 해시 비교 대상)는 그대로 두고, 이 파일에서 색만 덮어쓴다.
+   main.jsx에서 styles.css 다음에 불러오므로 같은 선택자는 이 파일 값이 적용된다.
+   본문 명도 대비 4.5:1 이상 유지: primary #4338ca 흰 배경 대비 약 7.6:1 */
+:root {
+  --bg: #f5f5fa;
+  --surface-2: #efeff7;
+  --ink: #1c1f33;
+  --ink-2: #4a4f66;
+  --line: #e2e2ee;
+  --primary: #4338ca;
+  --primary-soft: #e0e7ff;
+  --info-soft: #eef0ff;
+  --shadow: 0 1px 2px rgba(30, 27, 75, 0.05), 0 4px 16px rgba(30, 27, 75, 0.06);
+}
+
+/* 머리글·입력 테두리 등 중립색을 약간 차가운 톤으로 */
+.topbar {
+  background: rgba(245, 245, 250, 0.92);
+}
+.btn-outline,
+input:not([type='checkbox']):not([type='radio']):not([type='range']),
+select,
+textarea,
+.day,
+.option {
+  border-color: #c8c9db;
+}
+.empty {
+  border-color: #cdcee0;
+}
+.skeleton {
+  background: linear-gradient(90deg, #e9e9f2 0%, #f3f3f9 50%, #e9e9f2 100%);
+}
+.bar {
+  background: #e4e4ef;
+}
+.task-card.is-done,
+.rec-card,
+.cal-cell.out {
+  background: #fafafd;
+}
+
+/* 주 색상 계열 */
+.btn-primary:hover:not(:disabled) {
+  background: #3730a3;
+}
+.hero {
+  background: radial-gradient(120% 140% at 100% 0%, #6366f1 0%, var(--primary) 55%, #312e81 100%);
+}
+.hero p {
+  color: #e0e7ff;
+}
+.dday-sub,
+.dday-hero .muted {
+  color: #c7d2fe;
+}
+
+/* 머리글·로그인 화면 로고: 앱 아이콘 이미지를 그대로 사용 */
+.brand-mark {
+  background: url('/favicon.svg') center / cover no-repeat;
+}
+.brand-mark > svg {
+  display: none;
+}
