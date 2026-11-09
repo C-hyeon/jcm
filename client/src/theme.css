@@ -1,5 +1,5 @@
 /* 브랜드 테마 — 앱 아이콘(인디고·라벤더·골드)에 맞춘 색상.
-   styles.css(레이아웃·컴포넌트, QA 해시 비교 대상)는 그대로 두고, 이 파일에서 색만 덮어쓴다.
+   styles.css(레이아웃·컴포넌트, QA 해시 비교 대상)는 그대로 두고, 이 파일에서 색과 작은 배치 보정만 덮어쓴다.
    main.jsx에서 styles.css 다음에 불러오므로 같은 선택자는 이 파일 값이 적용된다.
    본문 명도 대비 4.5:1 이상 유지: primary #4338ca 흰 배경 대비 약 7.6:1 */
 :root {
@@ -54,6 +54,21 @@ textarea,
 .dday-sub,
 .dday-hero .muted {
   color: #c7d2fe;
+}
+
+/* 학습 자료 카드: 북마크 버튼을 카드 오른쪽 위에 고정한다.
+   태그가 길어 줄바꿈되어도 버튼이 다음 줄로 밀리지 않도록, 태그 줄은 버튼 자리만큼 비워 둔다. */
+.material-card {
+  position: relative;
+}
+.mc-head {
+  padding-right: 44px;
+}
+.mc-head .bm {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  margin-left: 0;
 }
 
 /* 머리글·로그인 화면 로고: 앱 아이콘 이미지를 그대로 사용 */
