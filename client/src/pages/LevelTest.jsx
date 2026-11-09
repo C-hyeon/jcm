@@ -166,7 +166,7 @@ export default function LevelTest() {
         {questions.map((item, i) => {
           const subject = subjects.find((s) => s.id === item.subjectId);
           return (
-            <fieldset key={item.id} className="card form">
+            <fieldset key={item.id} className="form">
               <legend className="h3">
                 {i + 1}. {item.text}
               </legend>
