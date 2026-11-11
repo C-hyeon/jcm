@@ -2,7 +2,9 @@
 // 가입 직후 레벨테스트 — 문항·채점은 서버에서만 처리하고 정답은 응답하지 않는다.
 // 문항은 기출 문제 본문을 옮기지 않고 필기 5과목의 기본 개념을 직접 작성한 것이다.
 
-// 필기 과목(w1~w5) 기준으로 채점하고, 실기 과목은 내용이 가까운 필기 과목 결과를 따른다.
+// 필기 5과목 15문항(과목당 3문항) + 실기 5문항(과목당 1문항), 총 20문항.
+// 필기 과목 자신감은 필기 문항으로만 정한다. 실기 과목은 내용이 가까운 필기 과목 결과를 따르고,
+// 실기 문항이 있는 과목은 그 문항을 2문항 몫으로 더해 함께 판단한다(PRACTICAL_WEIGHT).
 const PRACTICAL_DOMAIN = {
   p01: 'w1', // 요구사항 확인 ← 소프트웨어 설계
   p02: 'w3', // 데이터 입출력 구현 ← 데이터베이스 구축
@@ -38,6 +40,12 @@ const QUESTIONS = [
   { id: 'lt13', subjectId: 'w5', text: '원시 코드 라인 수(LOC)를 기반으로 개발 비용을 산정하는 모형은?', choices: ['COCOMO', '기능 점수(FP)', '델파이 기법', 'PERT'], answer: 0, explain: 'COCOMO는 LOC 기반 비용 산정 모형입니다. 델파이는 전문가 판단, PERT는 일정 관리 기법입니다.' },
   { id: 'lt14', subjectId: 'w5', text: '여러 대의 감염된 시스템이 한 서버에 대량의 트래픽을 보내 서비스를 마비시키는 공격은?', choices: ['SQL 삽입', 'DDoS', '피싱', '스니핑'], answer: 1, explain: 'DDoS는 분산 서비스 거부 공격입니다.' },
   { id: 'lt15', subjectId: 'w5', text: '다음 중 대칭키 암호화 알고리즘은?', choices: ['RSA', 'AES', 'ECC', 'DSA'], answer: 1, explain: 'AES는 대칭키 블록 암호입니다. RSA·ECC는 공개키 암호, DSA는 전자서명 알고리즘입니다.' },
+  // 실기 — 실기에서 자주 묻는 영역을 1문항씩 직접 묻는다.
+  { id: 'lt16', subjectId: 'p08', text: 'SQL의 SELECT 문에서 GROUP BY로 묶은 그룹에 조건을 걸 때 사용하는 절은?', choices: ['WHERE', 'GROUP BY', 'ORDER BY', 'HAVING'], answer: 3, explain: 'HAVING은 그룹으로 묶은 결과에 조건을 겁니다. WHERE는 그룹으로 묶기 전 개별 행에 조건을 겁니다.' },
+  { id: 'lt17', subjectId: 'p10', text: 'Python에서 a = [1, 2, 3, 4, 5] 일 때 print(a[1:4])의 출력 결과는?', choices: ['[1, 2, 3]', '[2, 3, 4]', '[2, 3, 4, 5]', '[1, 2, 3, 4]'], answer: 1, explain: '슬라이싱 a[1:4]는 인덱스 1부터 3까지(4는 제외) 가져오므로 [2, 3, 4]입니다.' },
+  { id: 'lt18', subjectId: 'p09', text: '게시판 등의 입력값에 악성 스크립트를 넣어, 그 글을 본 다른 사용자의 브라우저에서 스크립트가 실행되게 하는 공격은?', choices: ['SQL 삽입(SQL Injection)', 'CSRF(크로스 사이트 요청 위조)', 'XSS(크로스 사이트 스크립팅)', '스니핑(Sniffing)'], answer: 2, explain: 'XSS는 검증되지 않은 입력의 스크립트가 다른 사용자의 브라우저에서 실행되는 공격입니다. 입력값 검증과 출력 시 이스케이프로 막습니다.' },
+  { id: 'lt19', subjectId: 'p11', text: 'IPv4 네트워크 192.168.10.0/24에서 호스트에 할당할 수 있는 IP 주소의 개수는?', choices: ['254개', '255개', '256개', '128개'], answer: 0, explain: '/24는 호스트 부분이 8비트라 256개 주소가 있고, 네트워크 주소와 브로드캐스트 주소 2개를 빼면 254개입니다.' },
+  { id: 'lt20', subjectId: 'p07', text: '개발자의 환경에서 사용자가 직접 사용해 보고 개발자가 함께 지켜보며 문제를 기록하는 인수 테스트는?', choices: ['알파 테스트', '베타 테스트', '회귀 테스트', '스모크 테스트'], answer: 0, explain: '알파 테스트는 개발자 환경에서 개발자와 함께, 베타 테스트는 사용자 환경에서 개발자 없이 수행합니다.' },
 ];
 
 const LEVELS = [
@@ -45,6 +53,10 @@ const LEVELS = [
   { min: 0.4, level: 'intermediate', label: '중급', stage: 'concept', message: '일부 과목은 개념이 잡혀 있어요. 약한 과목부터 개념을 정리하는 것을 추천해요.' },
   { min: 0, level: 'beginner', label: '기초', stage: 'intro', message: '처음 공부하는 단계예요. 용어와 기본 개념부터 넉넉하게 시간을 잡는 것을 추천해요.' },
 ];
+
+// 실기 문항 1개는 해당 실기 과목을 직접 묻기 때문에 필기 문항 2개 몫으로 계산한다.
+// 예) 필기 3/3 + 실기 오답 → 3/5 = 60% 보통, 필기 1/3 + 실기 정답 → 3/5 보통, 필기 2/3 + 실기 오답 → 2/5 낮음
+const PRACTICAL_WEIGHT = 2;
 
 // 과목 정답률 → 자신감(1 낮음, 2 보통, 3 높음). 3문항 기준 0~1개 낮음, 2개 보통, 3개 높음
 function confidenceFor(rate) {
@@ -75,7 +87,13 @@ function gradeLevelTest(answers) {
   const lv = LEVELS.find((l) => rate >= l.min);
   const subjectConfidence = {};
   for (const [sid, s] of Object.entries(bySubject)) subjectConfidence[sid] = confidenceFor(s.correct / s.total);
-  for (const [pid, domain] of Object.entries(PRACTICAL_DOMAIN)) subjectConfidence[pid] = subjectConfidence[domain] ?? 2;
+  for (const [pid, domain] of Object.entries(PRACTICAL_DOMAIN)) {
+    const base = bySubject[domain];
+    const own = bySubject[pid];
+    if (!base) subjectConfidence[pid] = 2;
+    else if (!own) subjectConfidence[pid] = subjectConfidence[domain];
+    else subjectConfidence[pid] = confidenceFor((base.correct + own.correct * PRACTICAL_WEIGHT) / (base.total + own.total * PRACTICAL_WEIGHT));
+  }
   return {
     result: {
       correct,
@@ -92,4 +110,4 @@ function gradeLevelTest(answers) {
   };
 }
 
-module.exports = { QUESTIONS, PRACTICAL_DOMAIN, publicQuestions, gradeLevelTest, confidenceFor };
+module.exports = { QUESTIONS, PRACTICAL_DOMAIN, PRACTICAL_WEIGHT, publicQuestions, gradeLevelTest, confidenceFor };

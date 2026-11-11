@@ -33,7 +33,7 @@ function MemberHome() {
   // 레벨테스트를 건너뛴 회원에게 응시 안내
   const levelPrompt = me && !me.levelTest && (
     <Notice tone="info" icon="spark">
-      레벨테스트(15문항, 약 5분)로 내 수준을 확인하면 학습 단계와 과목별 시간 배분을 더 정확하게 잡을 수 있어요.{' '}
+      레벨테스트(20문항, 약 7분)로 내 수준을 확인하면 학습 단계와 과목별 시간 배분을 더 정확하게 잡을 수 있어요.{' '}
       <Link to="/level-test">레벨테스트 보기</Link>
     </Notice>
   );

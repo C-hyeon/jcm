@@ -80,7 +80,7 @@ function Charts({ d }) {
       <div className="stat-row">
         <div className="stat">
           <span className="stat-label">전체 진도율</span>
-          <span className="stat-val">{pct(d.summary.overall)}</span>
+          <span className="stat-val">{pct(d.summary.overall)} 완료</span>
         </div>
         <div className="stat">
           <span className="stat-label">잔여 학습량</span>

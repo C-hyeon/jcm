@@ -78,3 +78,25 @@ textarea,
 .brand-mark > svg {
   display: none;
 }
+
+/* 학습 화면 공통 D-day 표시 (홈 제외) */
+.dday-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.dday-chip strong {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}

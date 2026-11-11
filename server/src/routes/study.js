@@ -55,10 +55,11 @@ router.put(
 router.get(
   '/level-test',
   ah(async (req, res) => {
-    const [snap, subjects] = await Promise.all([userRef(req.user.uid).get(), getSubjects('written')]);
+    const [snap, subjects] = await Promise.all([userRef(req.user.uid).get(), getSubjects()]);
+    const asked = new Set(QUESTIONS.map((x) => x.subjectId));
     res.json({
       questions: publicQuestions(),
-      subjects: subjects.map((x) => ({ id: x.id, name: x.name })),
+      subjects: subjects.filter((x) => asked.has(x.id)).map((x) => ({ id: x.id, name: x.name, examType: x.examType })),
       result: snap.data()?.levelTest || null,
     });
   }),

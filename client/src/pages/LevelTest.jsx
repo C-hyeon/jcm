@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useApi } from '../hooks/useApi';
-import { STAGE, CONFIDENCE } from '../lib/format';
+import { STAGE, CONFIDENCE, EXAM_TYPE } from '../lib/format';
 import { ErrorBox, Loading, Notice, PageHeader, ProgressBar } from '../components/ui';
 import { safeNext } from './Auth';
 
@@ -25,6 +25,8 @@ export default function LevelTest() {
   const questions = q.data?.questions || [];
   const subjects = q.data?.subjects || [];
   const answered = questions.filter((x) => answers[x.id] !== undefined).length;
+  const practicalIds = new Set(subjects.filter((s) => s.examType === 'practical').map((s) => s.id));
+  const writtenCount = questions.filter((x) => !practicalIds.has(x.subjectId)).length;
   const firstTime = !!me?.levelTestPending;
 
   // 응시·건너뛰기 후 사용자 정보를 새로 받아 레벨테스트 안내(가입 직후 이동)를 끝낸다
@@ -89,24 +91,33 @@ export default function LevelTest() {
           <Notice tone="info" icon="spark">
             추천 학습 단계는 <strong>{STAGE[r.recommendedStage]}</strong>예요. 학습 계획을 만들 때 단계와 과목별 자신감이 이 결과로 미리 채워지고, 하루 필요 학습 시간 계산에도 반영돼요.
           </Notice>
-          <ul className="subject-bars">
-            {subjects.map((s) => {
-              const b = r.bySubject[s.id];
-              if (!b) return null;
-              const rate = (b.correct / b.total) * 100;
-              return (
-                <li key={s.id}>
-                  <div className="sb-row">
-                    <span className="sb-name">{s.name}</span>
-                    <span className="sb-val">
-                      {b.correct}/{b.total} · 자신감 {CONFIDENCE[r.subjectConfidence[s.id]]}
-                    </span>
-                  </div>
-                  <ProgressBar value={rate} label={`${s.name} 정답률`} />
-                </li>
-              );
-            })}
-          </ul>
+          {['written', 'practical'].map((type) => {
+            const group = subjects.filter((s) => (s.examType || 'written') === type && r.bySubject[s.id]);
+            if (!group.length) return null;
+            return (
+              <div key={type}>
+                <h3 className="h3">{EXAM_TYPE[type]}</h3>
+                {type === 'practical' && <p className="muted small">실기 과목 자신감은 실기 문항과 관련 필기 과목 결과를 함께 보고 정해요.</p>}
+                <ul className="subject-bars">
+                  {group.map((s) => {
+                    const b = r.bySubject[s.id];
+                    const rate = (b.correct / b.total) * 100;
+                    return (
+                      <li key={s.id}>
+                        <div className="sb-row">
+                          <span className="sb-name">{s.name}</span>
+                          <span className="sb-val">
+                            {b.correct}/{b.total} · 자신감 {CONFIDENCE[r.subjectConfidence[s.id]]}
+                          </span>
+                        </div>
+                        <ProgressBar value={rate} label={`${s.name} 정답률`} />
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
           <div className="row-end">
             <button type="button" className="btn btn-ghost" onClick={() => leave(next)}>
               나중에 할게요
@@ -142,7 +153,7 @@ export default function LevelTest() {
     <form className="stack narrow" onSubmit={submit} noValidate aria-busy={!!busy}>
       <PageHeader
         title="레벨테스트"
-        desc={`필기 5과목 기본 개념 ${questions.length}문항, 약 5분이면 끝나요. 결과로 내 수준을 확인하고 학습 단계·과목별 시간 배분에 반영해요.`}
+        desc={`필기 5과목 기본 개념 ${writtenCount}문항과 실기 핵심 ${questions.length - writtenCount}문항, 총 ${questions.length}문항이에요. 약 7분이면 끝나요. 결과로 내 수준을 확인하고 학습 단계·과목별 시간 배분에 반영해요.`}
       />
       {firstTime ? (
         <Notice tone="info" icon="check">가입을 환영해요! 먼저 지금 수준을 확인해 볼까요? 모르는 문항은 "잘 모르겠어요"를 고르면 더 정확해요.</Notice>
@@ -170,7 +181,11 @@ export default function LevelTest() {
               <legend className="h3">
                 {i + 1}. {item.text}
               </legend>
-              {subject && <p className="muted small">{subject.name}</p>}
+              {subject && (
+                <p className="muted small">
+                  {EXAM_TYPE[subject.examType || 'written']} · {subject.name}
+                </p>
+              )}
               <div className="option-list">
                 {[...item.choices.map((c, k) => [k, c]), [UNSURE, '잘 모르겠어요']].map(([value, label]) => (
                   <label key={value} className={`option ${answers[item.id] === value ? 'on' : ''}`}>

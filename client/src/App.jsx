@@ -3,6 +3,7 @@ import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router
 import Layout, { MorePage, RequireAuth } from './components/Layout';
 import { Loading } from './components/ui';
 import PageErrorBoundary from './components/2026-10-30-PageErrorBoundary';
+import DdayChip from './components/DdayChip';
 import { useAuth } from './context/AuthContext';
 import Home from './pages/Home';
 import { Login, ResetPassword, Signup } from './pages/Auth';
@@ -34,7 +35,12 @@ function LevelTestGate() {
   if (user && me?.uid === user.uid && me.levelTestPending) {
     return <Navigate to={`/level-test?next=${encodeURIComponent(location.pathname + location.search + location.hash)}`} replace />;
   }
-  return <Outlet />;
+  return (
+    <>
+      <DdayChip />
+      <Outlet />
+    </>
+  );
 }
 
 export default function App() {

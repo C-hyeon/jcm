@@ -43,6 +43,7 @@ cd client && npm install && npm run dev     # http://localhost:5173
 - `npm run seed -- --prod`는 시험 일정·과목·학습 자료를 시드 파일 내용으로 **덮어씁니다**(관리자 화면에서 고친 내용도 되돌아감). 실행 전에 팀에 먼저 알려 주세요.
 - `firestore.rules`·`firestore.indexes.json`을 바꾼 경우에만 저장소 루트에서 `firebase deploy --only firestore:rules,firestore:indexes`를 실행합니다. 배포 후 몇 분 동안은 인덱스 생성 중이라 일부 화면이 "일시적인 서버 오류"를 낼 수 있습니다.
 - 관리자 권한은 `cd server && npm run set-admin -- 이메일`로 부여합니다(해당 계정 재로그인 후 적용).
+- **데모 계정** `demo@jcm.test` / `Demo1234!` — 필기 준비 3주째 시나리오(레벨테스트 중급, 지난 3주 과제 17/21 완료, 오답 12건, 북마크 2개)로 모든 화면을 바로 확인할 수 있습니다. 데이터를 처음 상태로 되돌리려면 `cd server && node scripts/seedDemoUser.js --prod`, 삭제는 `--prod --remove`. 이 계정 데이터만 지우고 다시 만들며, 같은 이메일의 일반 사용자 계정이면 중단합니다.
 - `.env`, `service-account.json`, `.firebaserc`는 git에 올라가지 않도록 설정돼 있습니다. **키 내용을 메신저·이슈·커밋에 붙여 넣지 마세요.** 유출이 의심되면 콘솔(프로젝트 설정 → 서비스 계정)에서 키를 삭제하고 새로 발급합니다.
 - AI 추천은 현재 `AI_PROVIDER=mock`(실제 AI 호출 없음)입니다. 실제 AI 키는 사용량만큼 과금되므로 쓸지 팀에서 정한 뒤 넣습니다.
 
@@ -166,7 +167,7 @@ cd server && npx jest --coverage   # 단위·통합·시나리오 82개 + 커버
 | 요구사항 | 구현 |
 |---|---|
 | UC-01 회원 관리 | `pages/Auth.jsx`, `pages/Profile.jsx`, `routes/me.js` (5회 실패 시 재설정 안내, 탈퇴 재인증·`recursiveDelete`) |
-| UC-01 확장: 가입 직후 레벨테스트 | `pages/LevelTest.jsx`, `services/levelTest.js`, `routes/study.js` `/level-test` (15문항 서버 채점 → 수준·추천 학습 단계·과목별 자신감, 학습 계획 기본값으로 사용) |
+| UC-01 확장: 가입 직후 레벨테스트 | `pages/LevelTest.jsx`, `services/levelTest.js`, `routes/study.js` `/level-test` (필기 15문항 + 실기 5문항, 총 20문항 서버 채점 → 수준·추천 학습 단계·과목별 자신감, 학습 계획 기본값으로 사용) |
 | UC-02 시험 정보·학습 조건 | `pages/Onboarding.jsx`, `routes/study.js` (회차 선택 시 시험일 자동, **새 시험일은 최소 30일 전**, `POST /api/plans/estimate`로 하루 필요 학습 시간 추천·부족 시 시간/요일 조정 안내) |
 | UC-03 스케줄 생성·조회 | `services/scheduler.js` `buildPlan` (T_i 공식, 학습 단계별 총정리 비율 10/15/25/40%, 60% 미만 핵심 단원 우선), `pages/Schedule.jsx` |
 | UC-04 오늘 할 일·재배분 | `routes/study.js` `/today`, `scheduler.redistribute` (빈 학습일 → 넘치면 총정리 기간 대체) |

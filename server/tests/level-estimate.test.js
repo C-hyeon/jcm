@@ -7,7 +7,7 @@ const request = require('supertest');
 const fake = require('./fakeFirebase');
 const { createApp } = require('../src/app');
 const { estimateLoad, listStudyDates, reviewDayCount } = require('../src/services/scheduler');
-const { QUESTIONS, gradeLevelTest } = require('../src/services/levelTest');
+const { QUESTIONS, PRACTICAL_DOMAIN, gradeLevelTest } = require('../src/services/levelTest');
 const { invalidate } = require('../src/services/masters');
 const { todayKST, addDays } = require('../src/lib/dates');
 const { subjects } = require('./helpers');
@@ -158,8 +158,9 @@ describe('가입 직후 레벨테스트', () => {
     const answers = { ...allCorrect(), lt13: null, lt14: 0, lt15: 0 }; // 정보시스템 구축관리 0/3
     const res = await request(app).post('/api/level-test').set('Authorization', E).send({ answers });
     expect(res.status).toBe(201);
-    expect(res.body.result).toMatchObject({ correct: 12, total: 15, level: 'advanced', recommendedStage: 'practice' });
-    expect(res.body.result.subjectConfidence).toMatchObject({ w1: 3, w5: 1, p09: 1, p10: 3 });
+    expect(res.body.result).toMatchObject({ correct: 17, total: 20, level: 'advanced', recommendedStage: 'practice' });
+    // p09(보안)는 실기 문항 정답이지만 관련 필기(w5)가 0/3 → (0+2)/5 = 40% 낮음
+    expect(res.body.result.subjectConfidence).toMatchObject({ w1: 3, w5: 1, p09: 1, p10: 3, p12: 3 });
     expect(res.body.review.find((r) => r.id === 'lt13')).toMatchObject({ chosen: null, correct: false });
     const me = await request(app).get('/api/me').set('Authorization', E);
     expect(me.body.levelTestPending).toBe(false);
@@ -182,7 +183,41 @@ describe('가입 직후 레벨테스트', () => {
     const none = Object.fromEntries(QUESTIONS.map((q) => [q.id, null]));
     expect(gradeLevelTest(none).result).toMatchObject({ level: 'beginner', recommendedStage: 'intro', rate: 0 });
     const some = { ...none };
-    QUESTIONS.slice(0, 7).forEach((q) => (some[q.id] = q.answer)); // 7/15 = 46.7%
+    QUESTIONS.slice(0, 9).forEach((q) => (some[q.id] = q.answer)); // 9/20 = 45%
     expect(gradeLevelTest(some).result).toMatchObject({ level: 'intermediate', recommendedStage: 'concept' });
+    const most = { ...none };
+    QUESTIONS.slice(0, 14).forEach((q) => (most[q.id] = q.answer)); // 14/20 = 70%
+    expect(gradeLevelTest(most).result).toMatchObject({ level: 'advanced', total: 20 });
+  });
+
+  test('필기 15문항 + 실기 5문항, 실기 과목은 1문항씩', () => {
+    expect(QUESTIONS).toHaveLength(20);
+    expect(QUESTIONS.filter((q) => q.subjectId.startsWith('w'))).toHaveLength(15);
+    const practical = QUESTIONS.filter((q) => q.subjectId.startsWith('p'));
+    expect(practical).toHaveLength(5);
+    expect(new Set(practical.map((q) => q.subjectId)).size).toBe(5);
+    practical.forEach((q) => expect(PRACTICAL_DOMAIN).toHaveProperty(q.subjectId));
+  });
+
+  test('실기 자신감: 실기 문항은 필기 2문항 몫으로 관련 필기 결과와 합산', () => {
+    const all = Object.fromEntries(QUESTIONS.map((q) => [q.id, q.answer]));
+    const w3Wrong = ['lt07', 'lt08', 'lt09'];
+    // SQL 응용(p08 ← w3): 필기 3/3 + 실기 오답 → 3/5 = 60% 보통
+    expect(gradeLevelTest({ ...all, lt16: null }).result.subjectConfidence).toMatchObject({ w3: 3, p08: 2, p02: 3 });
+    // 필기 1/3 + 실기 정답 → 3/5 보통 (필기 w3 자체는 낮음, 실기 문항이 없는 p02는 필기를 그대로 따름)
+    const oneOf3 = { ...all, lt08: null, lt09: null };
+    expect(gradeLevelTest(oneOf3).result.subjectConfidence).toMatchObject({ w3: 1, p08: 2, p02: 1 });
+    // 필기 0/3 + 실기 오답 → 낮음
+    const none = { ...all, lt16: null, ...Object.fromEntries(w3Wrong.map((id) => [id, null])) };
+    expect(gradeLevelTest(none).result.subjectConfidence).toMatchObject({ w3: 1, p08: 1 });
+    expect(gradeLevelTest(all).result.bySubject.p08).toEqual({ correct: 1, total: 1 });
+  });
+
+  test('레벨테스트 과목 목록에 실기 문항 과목이 함께 내려간다', async () => {
+    const res = await request(app).get('/api/level-test').set('Authorization', E);
+    const ids = res.body.subjects.map((s) => s.id);
+    expect(ids).toEqual(expect.arrayContaining(['w1', 'w5', 'p08', 'p10']));
+    expect(ids).not.toContain('p01');
+    expect(res.body.subjects.find((s) => s.id === 'p08')).toMatchObject({ examType: 'practical' });
   });
 });
